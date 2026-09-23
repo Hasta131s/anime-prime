@@ -28,7 +28,6 @@ import {
   MAX_DISPLAY_NAME,
   MAX_FAVORITES,
   MAX_TAGLINE,
-  accentFor,
   handleFromEmail,
   resolveDisplayName,
   type CharacterPick,
@@ -89,7 +88,6 @@ function buildProfileView(
   const view: ProfileView = {
     userId: user._id,
     displayName,
-    accent: profile?.accent ?? accentFor(`${user._id}:${displayName}`),
     favoriteAnimeIds: profile?.favoriteAnimeIds ?? [],
     isPublic: profile?.isPublic ?? true,
     isAnonymous: Boolean(user.isAnonymous),
@@ -233,7 +231,6 @@ export async function memberCardsFor(
       const card: MemberCardView = {
         userId: user._id,
         displayName,
-        accent: profile?.accent ?? accentFor(`${user._id}:${displayName}`),
         isAnonymous: Boolean(user.isAnonymous),
         banned: Boolean(user.bannedAt),
         comments: profile?.commentCount ?? 0,
@@ -324,7 +321,6 @@ export const update = mutation({
     bio: v.optional(v.string()),
     location: v.optional(v.string()),
     website: v.optional(v.string()),
-    accent: v.optional(v.string()),
     favoriteGenre: v.optional(v.string()),
     isPublic: v.optional(v.boolean()),
   },
@@ -353,12 +349,6 @@ export const update = mutation({
     if (args.website !== undefined) {
       const value = cleanWebsite(args.website);
       patch.website = value ? value : undefined;
-    }
-    if (args.accent !== undefined) {
-      const value = args.accent.trim();
-      patch.accent = /^#[0-9a-f]{6}$/i.test(value)
-        ? value
-        : accentFor(String(user._id));
     }
     if (args.favoriteGenre !== undefined) {
       const value = clean(args.favoriteGenre, 30);

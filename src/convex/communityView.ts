@@ -41,7 +41,6 @@ export type CommentAuthorView = {
   handle?: string;
   image?: string;
   role?: string;
-  accent?: string;
   isAnonymous: boolean;
   banned: boolean;
 };
@@ -80,22 +79,6 @@ export type CommentThread = {
 // Profiles
 // ---------------------------------------------------------------------------
 
-export type AccentChoice = { value: string; label: string };
-
-/** Accent presets that sit well on the AniList navy stage. */
-export const PROFILE_ACCENTS: AccentChoice[] = [
-  { value: "#3db4f2", label: "AniList mavisi" },
-  { value: "#7bd555", label: "Yayın yeşili" },
-  { value: "#e5a04b", label: "Puan turuncusu" },
-  { value: "#e85d75", label: "Uyarı pembesi" },
-  { value: "#a78bfa", label: "Lavanta" },
-  { value: "#22d3ee", label: "Turkuaz" },
-  { value: "#f472b6", label: "Sakura" },
-  { value: "#94a3b8", label: "Gri" },
-];
-
-export const DEFAULT_ACCENT = PROFILE_ACCENTS[0].value;
-
 /**
  * A character a member chose to represent them, as AniList reports it.
  * Real data only: the portrait and the title it belongs to both come from the
@@ -129,7 +112,6 @@ export type ProfileView = {
   displayName: string;
   handle?: string;
   image?: string;
-  accent: string;
   tagline?: string;
   bio?: string;
   location?: string;
@@ -182,7 +164,6 @@ export type MemberCardView = {
   image?: string;
   /** Character portrait, preferred over the account avatar in lists. */
   characterImage?: string;
-  accent: string;
   tagline?: string;
   role?: string;
   isAnonymous: boolean;
@@ -225,16 +206,6 @@ export function initialsFor(name: string) {
   if (parts.length === 0) return "?";
   if (parts.length === 1) return parts[0].slice(0, 1).toUpperCase();
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
-}
-
-/** Deterministic hue so a person keeps the same colour across the site. */
-export function accentFor(seed: string, fallback?: string) {
-  if (fallback) return fallback;
-  let hash = 0;
-  for (let index = 0; index < seed.length; index += 1) {
-    hash = (hash * 31 + seed.charCodeAt(index)) % 360;
-  }
-  return PROFILE_ACCENTS[hash % PROFILE_ACCENTS.length].value;
 }
 
 /** Turkish role wording used on comments and member lists. */

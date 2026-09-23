@@ -26,7 +26,6 @@ import {
   MAX_DISPLAY_NAME,
   MAX_FAVORITES,
   MAX_TAGLINE,
-  PROFILE_ACCENTS,
   communityRoleLabel,
   initialsFor,
   type CharacterPick,
@@ -267,7 +266,7 @@ function ProfileHeader({
 
   return (
     <section className="border-b border-border">
-      <div className="relative h-[150px] w-full overflow-hidden sm:h-[200px]">
+      <div className="relative h-[190px] w-full overflow-hidden sm:h-[250px] lg:h-[290px]">
         {hero ? (
           <img
             src={hero}
@@ -276,20 +275,17 @@ function ProfileHeader({
             className="size-full object-cover object-center"
           />
         ) : (
-          <div
-            className="size-full"
-            style={{ backgroundColor: profile.accent }}
-          />
+          <div className="size-full bg-secondary" />
         )}
-        <div className="absolute inset-0 bg-linear-to-t from-background via-background/70 to-background/20" />
+        <div className="absolute inset-0 bg-linear-to-t from-background via-background/75 to-background/25" />
       </div>
 
       <Container>
-        <div className="-mt-[52px] flex flex-col gap-4 pb-5 sm:flex-row sm:items-end sm:gap-5">
-          <ProfileAvatar profile={profile} />
+        <div className="-mt-[84px] flex flex-col gap-4 pb-5 sm:-mt-[112px] sm:flex-row sm:items-end sm:gap-6">
+          <ProfilePortrait profile={profile} />
 
-          <div className="min-w-0 flex-1">
-            <h1 className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[20px] font-bold text-foreground sm:text-[24px]">
+          <div className="min-w-0 flex-1 sm:pb-1">
+            <h1 className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[20px] font-bold text-foreground sm:text-[26px]">
               {profile.displayName}
               {communityRoleLabel(profile.role) ? (
                 <span className="rounded-[2px] bg-primary/15 px-1.5 py-0.5 text-[11px] font-medium text-primary">
@@ -330,24 +326,32 @@ function ProfileHeader({
   );
 }
 
-function ProfileAvatar({ profile }: { profile: ProfileView }) {
-  // The chosen character is the member's face; the account avatar is the
-  // fallback and initials are the last resort.
+/**
+ * Portrait-shaped identity block. A character portrait keeps its 3:4 framing so
+ * the header reads as a profile instead of a wide strip.
+ */
+function ProfilePortrait({ profile }: { profile: ProfileView }) {
   const portrait = profile.characterImage ?? profile.image;
+  const frame =
+    "w-[112px] shrink-0 overflow-hidden rounded-[3px] border-2 border-background sm:w-[140px]";
+
   if (portrait) {
     return (
       <img
         src={portrait}
         alt={profile.characterName ?? ""}
-        className="size-[88px] shrink-0 rounded-[3px] border-2 border-background object-cover object-top sm:size-[104px]"
+        className={cn(frame, "aspect-[3/4] object-cover object-top")}
       />
     );
   }
+
   return (
     <span
       aria-hidden="true"
-      className="flex size-[88px] shrink-0 items-center justify-center rounded-[3px] border-2 border-background text-[28px] font-bold text-white sm:size-[104px] sm:text-[34px]"
-      style={{ backgroundColor: profile.accent }}
+      className={cn(
+        frame,
+        "flex aspect-[3/4] items-center justify-center bg-secondary text-[30px] font-bold text-muted-foreground sm:text-[36px]",
+      )}
     >
       {initialsFor(profile.displayName)}
     </span>
@@ -458,7 +462,6 @@ function ProfileEditor({ profile }: { profile: ProfileView }) {
   const [location, setLocation] = useState(profile.location ?? "");
   const [website, setWebsite] = useState(profile.website ?? "");
   const [favoriteGenre, setFavoriteGenre] = useState(profile.favoriteGenre ?? "");
-  const [accent, setAccent] = useState(profile.accent);
   const [isPublic, setIsPublic] = useState(profile.isPublic);
 
   const search = useRemoteSearch(term, 2);
@@ -476,7 +479,6 @@ function ProfileEditor({ profile }: { profile: ProfileView }) {
     setLocation(profile.location ?? "");
     setWebsite(profile.website ?? "");
     setFavoriteGenre(profile.favoriteGenre ?? "");
-    setAccent(profile.accent);
     setIsPublic(profile.isPublic);
   }, [open]);
 
@@ -491,7 +493,6 @@ function ProfileEditor({ profile }: { profile: ProfileView }) {
         location,
         website,
         favoriteGenre,
-        accent,
         isPublic,
       });
       toast.success("Profilin güncellendi.");
@@ -584,27 +585,6 @@ function ProfileEditor({ profile }: { profile: ProfileView }) {
               />
             </Field>
           </div>
-
-          <Field label="Yedek renk" hint="Karakter seçilmezse kullanılır">
-            <div className="flex flex-wrap gap-2">
-              {PROFILE_ACCENTS.map((choice) => (
-                <button
-                  key={choice.value}
-                  type="button"
-                  title={choice.label}
-                  aria-label={choice.label}
-                  onClick={() => setAccent(choice.value)}
-                  className={cn(
-                    "size-7 rounded-[3px] border-2 transition-transform",
-                    accent === choice.value
-                      ? "scale-110 border-foreground"
-                      : "border-transparent",
-                  )}
-                  style={{ backgroundColor: choice.value }}
-                />
-              ))}
-            </div>
-          </Field>
 
           <label className="flex cursor-pointer items-center gap-2 text-[12px] text-muted-foreground">
             <input

@@ -22,7 +22,6 @@ import {
   COMMENT_POPULAR_SCAN_LIMIT,
   COMMENT_REPLY_LIMIT,
   DEFAULT_COMMENTS_PAGE_SIZE,
-  accentFor,
   handleFromEmail,
   normalizeCommentSort,
   resolveDisplayName,
@@ -91,8 +90,6 @@ async function authorFor(
   if (user?.role) author.role = user.role;
   const handle = handleFromEmail(user?.email);
   if (handle) author.handle = handle;
-  if (profile?.accent) author.accent = profile.accent;
-  else author.accent = accentFor(`${userId}:${name}`);
 
   cache.set(userId, author);
   return author;

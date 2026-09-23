@@ -1,15 +1,14 @@
 /**
  * Shared access to the `profiles` table.
  *
- * A profile row holds the public customisation (display name, bio, accent,
- * favourites, banner) plus the counters a profile page shows. It is created
- * lazily the first time an account does something worth counting, so an account
- * that never customises anything still renders correctly.
+ * A profile row holds the public customisation (display name, bio, chosen
+ * character, favourites, banner) plus the counters a profile page shows. It is
+ * created lazily the first time an account does something worth counting, so an
+ * account that never customises anything still renders correctly.
  */
 
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
-import { accentFor } from "./communityView";
 
 export type ReadCtx = QueryCtx | MutationCtx;
 
@@ -36,7 +35,6 @@ export async function ensureProfile(
     userId,
     favoriteAnimeIds: [],
     isPublic: true,
-    accent: accentFor(String(userId)),
     commentCount: 0,
     watchedTitleCount: 0,
     watchedEpisodeCount: 0,

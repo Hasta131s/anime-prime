@@ -241,7 +241,6 @@ const schema = defineSchema(
       location: v.optional(v.string()),
       website: v.optional(v.string()),
       /** Accent colour used for the profile banner and initials avatar. */
-      accent: v.optional(v.string()),
       favoriteGenre: v.optional(v.string()),
       /** AniList id whose banner is used as the profile header image. */
       bannerAnilistId: v.optional(v.number()),

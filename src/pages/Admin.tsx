@@ -262,8 +262,7 @@ function MemberRow({ member }: { member: MemberCardView }) {
         ) : (
           <span
             aria-hidden="true"
-            className="flex size-9 shrink-0 items-center justify-center rounded-[2px] text-[12px] font-semibold text-white"
-            style={{ backgroundColor: member.accent }}
+            className="flex size-9 shrink-0 items-center justify-center rounded-[2px] bg-secondary text-[12px] font-semibold text-muted-foreground"
           >
             {initialsFor(member.displayName)}
           </span>
@@ -433,8 +432,7 @@ function CommentsTab() {
             <li key={comment.id} className="flex items-start gap-3 p-3">
               <span
                 aria-hidden="true"
-                className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-[2px] text-[11px] font-semibold text-white"
-                style={{ backgroundColor: comment.author.accent ?? "#3db4f2" }}
+                className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-[2px] bg-secondary text-[11px] font-semibold text-muted-foreground"
               >
                 {initialsFor(comment.author.name)}
               </span>
