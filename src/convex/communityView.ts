@@ -95,6 +95,22 @@ export const PROFILE_ACCENTS: AccentChoice[] = [
 ];
 
 export const DEFAULT_ACCENT = PROFILE_ACCENTS[0].value;
+
+/**
+ * A character a member chose to represent them, as AniList reports it.
+ * Real data only: the portrait and the title it belongs to both come from the
+ * AniList API, never from user input.
+ */
+export type CharacterPick = {
+  id: number;
+  name: string;
+  image?: string;
+  mediaTitle?: string;
+  mediaAnilistId?: number;
+};
+
+export const CHARACTER_SEARCH_MIN = 2;
+export const CHARACTER_SEARCH_MAX = 24;
 export const MAX_FAVORITES = 12;
 export const MAX_DISPLAY_NAME = 32;
 export const MAX_TAGLINE = 90;
@@ -121,6 +137,13 @@ export type ProfileView = {
   favoriteGenre?: string;
   favoriteAnimeIds: number[];
   bannerAnilistId?: number;
+  /** The character the member picked to represent their profile. */
+  characterName?: string;
+  characterImage?: string;
+  characterMediaTitle?: string;
+  characterAnilistId?: number;
+  /** AniList id of the anime the character belongs to. */
+  characterMediaAnilistId?: number;
   isPublic: boolean;
   role?: string;
   isAnonymous: boolean;
@@ -157,6 +180,8 @@ export type MemberCardView = {
   displayName: string;
   handle?: string;
   image?: string;
+  /** Character portrait, preferred over the account avatar in lists. */
+  characterImage?: string;
   accent: string;
   tagline?: string;
   role?: string;

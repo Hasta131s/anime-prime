@@ -251,12 +251,14 @@ function MemberRow({ member }: { member: MemberCardView }) {
   };
 
   const isAdmin = member.role === "admin";
+  // The chosen character is the member's face; the account avatar is the fallback.
+  const portrait = member.characterImage ?? member.image;
 
   return (
     <li className="flex flex-wrap items-center gap-3 p-3">
       <span className="flex min-w-0 flex-1 items-center gap-2.5">
-        {member.image ? (
-          <img src={member.image} alt="" className="size-9 shrink-0 rounded-[2px] object-cover" />
+        {portrait ? (
+          <img src={portrait} alt="" className="size-9 shrink-0 rounded-[2px] object-cover object-top" />
         ) : (
           <span
             aria-hidden="true"

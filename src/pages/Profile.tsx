@@ -21,6 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { api } from "@/convex/_generated/api";
 import {
+  CHARACTER_SEARCH_MIN,
   MAX_BIO,
   MAX_DISPLAY_NAME,
   MAX_FAVORITES,
@@ -28,6 +29,7 @@ import {
   PROFILE_ACCENTS,
   communityRoleLabel,
   initialsFor,
+  type CharacterPick,
   type CommentView,
   type ProfileResult,
   type ProfileView,
@@ -39,7 +41,7 @@ import { useRemoteSearch } from "@/hooks/use-anime";
 import { formatClock } from "@/lib/watch-progress";
 import { formatDateTime, formatRelative, genreLabel } from "@/lib/anime-labels";
 import { cn } from "@/lib/utils";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import {
   CalendarDays,
   Clock,
@@ -48,6 +50,7 @@ import {
   MapPin,
   Pencil,
   Search,
+  Sparkles,
   Trash2,
   TriangleAlert,
 } from "lucide-react";
@@ -216,6 +219,8 @@ export default function Profile() {
                   ) : null}
                 </Panel>
 
+                <ProfileCharacterPanel profile={profile} />
+
                 <Panel
                   title="Son yorumlar"
                   action={
@@ -326,12 +331,15 @@ function ProfileHeader({
 }
 
 function ProfileAvatar({ profile }: { profile: ProfileView }) {
-  if (profile.image) {
+  // The chosen character is the member's face; the account avatar is the
+  // fallback and initials are the last resort.
+  const portrait = profile.characterImage ?? profile.image;
+  if (portrait) {
     return (
       <img
-        src={profile.image}
-        alt=""
-        className="size-[88px] shrink-0 rounded-[3px] border-2 border-background object-cover sm:size-[104px]"
+        src={portrait}
+        alt={profile.characterName ?? ""}
+        className="size-[88px] shrink-0 rounded-[3px] border-2 border-background object-cover object-top sm:size-[104px]"
       />
     );
   }
@@ -577,7 +585,7 @@ function ProfileEditor({ profile }: { profile: ProfileView }) {
             </Field>
           </div>
 
-          <Field label="Profil rengi">
+          <Field label="Yedek renk" hint="Karakter seçilmezse kullanılır">
             <div className="flex flex-wrap gap-2">
               {PROFILE_ACCENTS.map((choice) => (
                 <button
@@ -607,6 +615,8 @@ function ProfileEditor({ profile }: { profile: ProfileView }) {
             />
             Profilim herkese açık olsun
           </label>
+
+          <CharacterPicker />
 
           {/* -------------------------------------------------- favorites */}
           <div className="border-t border-border pt-4">
@@ -729,6 +739,234 @@ function ProfileEditor({ profile }: { profile: ProfileView }) {
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Profile character
+// ---------------------------------------------------------------------------
+
+/** Shows the character a member chose to represent their profile. */
+function ProfileCharacterPanel({ profile }: { profile: ProfileView }) {
+  if (!profile.characterName) return null;
+
+  return (
+    <Panel title="Profil karakteri">
+      <div className="flex items-center gap-3">
+        {profile.characterImage ? (
+          <img
+            src={profile.characterImage}
+            alt={profile.characterName}
+            className="size-16 shrink-0 rounded-[3px] border border-border object-cover object-top"
+          />
+        ) : (
+          <span className="size-16 shrink-0 rounded-[3px] bg-accent" />
+        )}
+        <div className="min-w-0">
+          <p className="truncate text-[13px] font-semibold text-foreground">
+            {profile.characterName}
+          </p>
+          {profile.characterMediaTitle ? (
+            profile.characterMediaAnilistId ? (
+              <Link
+                to={`/anime/${profile.characterMediaAnilistId}`}
+                className="block truncate text-[11px] text-primary hover:underline"
+              >
+                {profile.characterMediaTitle}
+              </Link>
+            ) : (
+              <p className="truncate text-[11px] text-muted-foreground">
+                {profile.characterMediaTitle}
+              </p>
+            )
+          ) : null}
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
+/**
+ * Character picker: search the real AniList character catalogue, then save the
+ * chosen one. Only the AniList id is sent — the server resolves the portrait and
+ * the title it belongs to.
+ */
+function CharacterPicker() {
+  const me = useQuery(api.profiles.me);
+  const search = useAction(api.profiles.characterSearch);
+  const setCharacter = useAction(api.profiles.setCharacter);
+  const clearCharacter = useMutation(api.profiles.clearCharacter);
+
+  const [term, setTerm] = useState("");
+  const [items, setItems] = useState<CharacterPick[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [picking, setPicking] = useState<number | null>(null);
+
+  useEffect(() => {
+    const q = term.trim();
+    if (q.length < CHARACTER_SEARCH_MIN) {
+      setItems([]);
+      setSearching(false);
+      return;
+    }
+
+    let cancelled = false;
+    setSearching(true);
+    const timer = setTimeout(() => {
+      search({ q })
+        .then((results) => {
+          if (!cancelled) setItems(results);
+        })
+        .catch(() => {
+          if (!cancelled) setItems([]);
+        })
+        .finally(() => {
+          if (!cancelled) setSearching(false);
+        });
+    }, 400);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [term, search]);
+
+  const current = me?.profile;
+
+  const choose = async (characterId: number) => {
+    setPicking(characterId);
+    try {
+      await setCharacter({ characterId });
+      toast.success("Profil karakterin güncellendi.");
+      setTerm("");
+      setItems([]);
+    } catch (cause) {
+      toast.error(cause instanceof Error ? cause.message : "Karakter seçilemedi.");
+    } finally {
+      setPicking(null);
+    }
+  };
+
+  return (
+    <div className="border-t border-border pt-4">
+      <p className="stat-label">Profil karakteri</p>
+      <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+        İstediğin animeden istediğin karakteri seç; profilin ve yorumların o
+        karakterle görünür.
+      </p>
+
+      {current?.characterName ? (
+        <div className="mt-2 flex items-center gap-2.5 rounded-[3px] border border-border bg-background/40 p-2">
+          {current.characterImage ? (
+            <img
+              src={current.characterImage}
+              alt={current.characterName}
+              className="size-12 shrink-0 rounded-[2px] object-cover object-top"
+            />
+          ) : (
+            <span className="size-12 shrink-0 rounded-[2px] bg-accent" />
+          )}
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[12px] font-medium text-foreground">
+              {current.characterName}
+            </span>
+            {current.characterMediaTitle ? (
+              <span className="block truncate text-[10px] text-muted-foreground">
+                {current.characterMediaTitle}
+              </span>
+            ) : null}
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-destructive"
+            onClick={() =>
+              void clearCharacter()
+                .then(() => toast.success("Profil karakteri kaldırıldı."))
+                .catch((cause) =>
+                  toast.error(cause instanceof Error ? cause.message : "Kaldırılamadı."),
+                )
+            }
+          >
+            <Trash2 className="size-3.5" />
+            Kaldır
+          </Button>
+        </div>
+      ) : (
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          Henüz karakter seçilmedi.
+        </p>
+      )}
+
+      <div className="relative mt-3">
+        <Search
+          className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
+          aria-hidden="true"
+        />
+        <Input
+          value={term}
+          onChange={(event) => setTerm(event.target.value)}
+          placeholder="Karakter ara — örn. Levi, Gojo, Naruto"
+          className="pl-9"
+        />
+      </div>
+
+      {searching ? (
+        <p className="mt-2 flex items-center gap-2 text-[11px] text-muted-foreground">
+          <Loader2 className="size-3 animate-spin" />
+          AniList karakterleri aranıyor…
+        </p>
+      ) : null}
+
+      {term.trim().length >= CHARACTER_SEARCH_MIN && !searching ? (
+        items.length > 0 ? (
+          <ul className="mt-2 grid max-h-[240px] grid-cols-3 gap-2 overflow-y-auto sm:grid-cols-4">
+            {items.map((pick) => (
+              <li key={pick.id}>
+                <button
+                  type="button"
+                  disabled={picking !== null}
+                  onClick={() => void choose(pick.id)}
+                  className={cn(
+                    "w-full overflow-hidden rounded-[3px] border text-left transition-colors",
+                    current?.characterAnilistId === pick.id
+                      ? "border-primary bg-primary/10"
+                      : "border-border bg-background/40 hover:border-primary/60",
+                  )}
+                >
+                  {pick.image ? (
+                    <img
+                      src={pick.image}
+                      alt={pick.name}
+                      loading="lazy"
+                      className="aspect-[3/4] w-full object-cover object-top"
+                    />
+                  ) : (
+                    <span className="block aspect-[3/4] w-full bg-accent" />
+                  )}
+                  <span className="block p-1.5">
+                    <span className="line-clamp-1 text-[11px] font-medium text-foreground">
+                      {pick.name}
+                    </span>
+                    {pick.mediaTitle ? (
+                      <span className="line-clamp-1 text-[10px] text-muted-foreground">
+                        {pick.mediaTitle}
+                      </span>
+                    ) : null}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <Sparkles className="size-3" />
+            Sonuç bulunamadı.
+          </p>
+        )
+      ) : null}
+    </div>
   );
 }
 

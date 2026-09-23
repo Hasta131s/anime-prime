@@ -197,6 +197,31 @@ const DETAIL_QUERY = `
   }
 `;
 
+/** Character search, used by the "pick a character for your profile" picker. */
+const CHARACTER_SEARCH_QUERY = `
+  query CharacterSearch($page: Int, $perPage: Int, $search: String) {
+    Page(page: $page, perPage: $perPage) {
+      characters(search: $search, sort: FAVOURITES_DESC) {
+        id
+        name { full }
+        image { large }
+        media(perPage: 1, sort: POPULARITY_DESC) { nodes { id title { romaji english } } }
+      }
+    }
+  }
+`;
+
+const CHARACTER_QUERY = `
+  query Character($id: Int) {
+    Character(id: $id) {
+      id
+      name { full }
+      image { large }
+      media(perPage: 1, sort: POPULARITY_DESC) { nodes { id title { romaji english } } }
+    }
+  }
+`;
+
 /**
  * Broadcast times for one window, as AniList's `airingSchedules` reports them.
  * 
@@ -694,4 +719,80 @@ export async function fetchAiring(
   }
 
   return slots;
+}
+
+// ---------------------------------------------------------------------------
+// Characters
+// ---------------------------------------------------------------------------
+
+export type NormalizedCharacterPick = {
+  id: number;
+  name: string;
+  image?: string;
+  mediaTitle?: string;
+  mediaAnilistId?: number;
+};
+
+type RawCharacter = Maybe<{
+  id?: Maybe<number>;
+  name?: Maybe<{ full?: Maybe<string> }>;
+  image?: Maybe<{ large?: Maybe<string> }>;
+  media?: Maybe<{
+    nodes?: Maybe<
+      Array<
+        Maybe<{
+          id?: Maybe<number>;
+          title?: Maybe<{ romaji?: Maybe<string>; english?: Maybe<string> }>;
+        }>
+      >
+    >;
+  }>;
+}>;
+
+function toCharacterPick(node: RawCharacter): NormalizedCharacterPick | null {
+  const id = num(node?.id);
+  const name = text(node?.name?.full);
+  if (!id || !name) return null;
+
+  const pick: NormalizedCharacterPick = { id, name };
+  const image = text(node?.image?.large);
+  if (image) pick.image = image;
+
+  const media = (node?.media?.nodes ?? []).find((entry) => Boolean(entry?.id));
+  const mediaTitle = text(media?.title?.romaji) ?? text(media?.title?.english);
+  if (mediaTitle) pick.mediaTitle = mediaTitle;
+  const mediaAnilistId = num(media?.id);
+  if (mediaAnilistId) pick.mediaAnilistId = mediaAnilistId;
+
+  return pick;
+}
+
+/** Character search for the profile picker. */
+export async function searchCharacters(
+  term: string,
+  perPage = 24,
+): Promise<NormalizedCharacterPick[]> {
+  const trimmed = term.trim();
+  if (trimmed.length < 2) return [];
+
+  const data = await request<{
+    Page?: Maybe<{ characters?: Maybe<Array<RawCharacter>> }>;
+  }>(CHARACTER_SEARCH_QUERY, {
+    page: 1,
+    perPage: Math.min(Math.max(perPage, 1), 40),
+    search: trimmed,
+  });
+
+  return (data.Page?.characters ?? [])
+    .map(toCharacterPick)
+    .filter((pick): pick is NormalizedCharacterPick => pick !== null);
+}
+
+/** One character by AniList id — the trustworthy source for a saved pick. */
+export async function fetchCharacter(
+  id: number,
+): Promise<NormalizedCharacterPick | null> {
+  if (!Number.isInteger(id) || id <= 0) return null;
+  const data = await request<{ Character?: RawCharacter }>(CHARACTER_QUERY, { id });
+  return toCharacterPick(data.Character);
 }

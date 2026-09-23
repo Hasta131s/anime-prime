@@ -247,6 +247,20 @@ const schema = defineSchema(
       bannerAnilistId: v.optional(v.number()),
       /** Ordered favourites — the first one supplies the default banner. */
       favoriteAnimeIds: v.array(v.number()),
+
+      /**
+       * The character the member chose to represent them, captured from AniList
+       * when they pick it. Name and portrait are stored so the profile renders
+       * without another upstream call, and they are always server-fetched — a
+       * member can never write an arbitrary image URL here.
+       */
+      characterAnilistId: v.optional(v.number()),
+      characterName: v.optional(v.string()),
+      characterImage: v.optional(v.string()),
+      characterMediaTitle: v.optional(v.string()),
+      /** AniList id of the anime the character belongs to (for the link). */
+      characterMediaAnilistId: v.optional(v.number()),
+
       isPublic: v.boolean(),
       commentCount: v.number(),
       /** Distinct titles with at least one recorded episode. */

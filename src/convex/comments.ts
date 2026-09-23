@@ -85,7 +85,9 @@ async function authorFor(
     isAnonymous: user?.isAnonymous ?? false,
     banned: Boolean(user?.bannedAt),
   };
-  if (user?.image) author.image = user.image;
+  // A chosen character is the member's face across the site.
+  if (profile?.characterImage) author.image = profile.characterImage;
+  else if (user?.image) author.image = user.image;
   if (user?.role) author.role = user.role;
   const handle = handleFromEmail(user?.email);
   if (handle) author.handle = handle;

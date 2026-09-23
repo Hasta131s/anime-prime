@@ -9,16 +9,21 @@
  */
 
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import {
+  action,
+  internalMutation,
   mutation,
   query,
   type MutationCtx,
   type QueryCtx,
 } from "./_generated/server";
 import { currentUser, isAdmin, requireMember } from "./access";
+import { fetchCharacter, searchCharacters } from "./anilist";
 import { animeRowByAnilistId, cardsByAnilistIds } from "./animeStore";
 import {
+  CHARACTER_SEARCH_MAX,
   MAX_BIO,
   MAX_DISPLAY_NAME,
   MAX_FAVORITES,
@@ -26,6 +31,7 @@ import {
   accentFor,
   handleFromEmail,
   resolveDisplayName,
+  type CharacterPick,
   type CommentView,
   type MemberCardView,
   type ProfileResult,
@@ -93,6 +99,18 @@ function buildProfileView(
     joinedAt: user._creationTime,
     updatedAt: profile?.updatedAt ?? user._creationTime,
   };
+
+  if (profile?.characterName) view.characterName = profile.characterName;
+  if (profile?.characterImage) view.characterImage = profile.characterImage;
+  if (profile?.characterMediaTitle) {
+    view.characterMediaTitle = profile.characterMediaTitle;
+  }
+  if (profile?.characterAnilistId) {
+    view.characterAnilistId = profile.characterAnilistId;
+  }
+  if (profile?.characterMediaAnilistId) {
+    view.characterMediaAnilistId = profile.characterMediaAnilistId;
+  }
 
   const handle = handleFromEmail(user.email);
   if (handle) view.handle = handle;
@@ -227,6 +245,7 @@ export async function memberCardsFor(
       const handle = handleFromEmail(user.email);
       if (handle) card.handle = handle;
       if (user.image) card.image = user.image;
+      if (profile?.characterImage) card.characterImage = profile.characterImage;
       if (user.role) card.role = user.role;
       if (profile?.tagline) card.tagline = profile.tagline;
       return card;
@@ -410,6 +429,87 @@ export const setBanner = mutation({
     }
     await ctx.db.patch(profile._id, {
       bannerAnilistId: args.anilistId,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Profile character
+// ---------------------------------------------------------------------------
+
+/**
+ * Character search for the profile picker.
+ * A public read: it only proxies AniList's own character search.
+ */
+export const characterSearch = action({
+  args: { q: v.string() },
+  handler: async (_ctx, args): Promise<CharacterPick[]> => {
+    const results = await searchCharacters(args.q, CHARACTER_SEARCH_MAX);
+    return results.map((pick) => ({ ...pick }));
+  },
+});
+
+/**
+ * Saves the character a member chose to represent them.
+ *
+ * The client only sends the AniList character id; the name, portrait and the
+ * title it belongs to are fetched server-side, so a profile can never point at
+ * an arbitrary image URL.
+ */
+export const setCharacter = action({
+  args: { characterId: v.number() },
+  handler: async (ctx, args) => {
+    const character = await fetchCharacter(args.characterId);
+    if (!character) {
+      throw new Error("Bu karakter AniList kataloğunda bulunamadı.");
+    }
+
+    await ctx.runMutation(internal.profiles.saveCharacter, {
+      characterId: character.id,
+      name: character.name,
+      image: character.image,
+      mediaTitle: character.mediaTitle,
+      mediaAnilistId: character.mediaAnilistId,
+    });
+  },
+});
+
+/** Writes a server-fetched character onto the profile. Not callable directly. */
+export const saveCharacter = internalMutation({
+  args: {
+    characterId: v.number(),
+    name: v.string(),
+    image: v.optional(v.string()),
+    mediaTitle: v.optional(v.string()),
+    mediaAnilistId: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireMember(ctx);
+    const profile = await ensureProfile(ctx, user._id);
+    await ctx.db.patch(profile._id, {
+      characterAnilistId: args.characterId,
+      characterName: args.name,
+      characterImage: args.image,
+      characterMediaTitle: args.mediaTitle,
+      characterMediaAnilistId: args.mediaAnilistId,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+/** Removes the chosen character; the account avatar or initials take over. */
+export const clearCharacter = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const user = await requireMember(ctx);
+    const profile = await ensureProfile(ctx, user._id);
+    await ctx.db.patch(profile._id, {
+      characterAnilistId: undefined,
+      characterName: undefined,
+      characterImage: undefined,
+      characterMediaTitle: undefined,
+      characterMediaAnilistId: undefined,
       updatedAt: Date.now(),
     });
   },
