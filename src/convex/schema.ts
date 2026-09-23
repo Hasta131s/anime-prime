@@ -44,6 +44,13 @@ const schema = defineSchema(
       isAnonymous: v.optional(v.boolean()), // is the user anonymous. do not remove
 
       role: v.optional(roleValidator), // role of the user. do not remove
+
+      // Moderation state. A banned account keeps read access but cannot post
+      // comments, customise its profile or record progress.
+      bannedAt: v.optional(v.number()),
+      banReason: v.optional(v.string()),
+      bannedBy: v.optional(v.id("users")),
+      lastSeenAt: v.optional(v.number()),
     }).index("email", ["email"]), // index for the email. do not remove or modify
 
     /**
@@ -167,6 +174,104 @@ const schema = defineSchema(
       attempts: v.number(),
       attemptedAt: v.number(),
     }).index("by_key", ["key"]),
+
+    /**
+     * One row per airing episode, mirrored from AniList's `airingSchedules`.
+     * The calendar page reads these and joins them with the cached titles, so
+     * every slot on the timetable is a real broadcast time from AniList.
+     */
+    airingSchedule: defineTable({
+      anilistId: v.number(),
+      episode: v.number(),
+      /** Epoch ms of the broadcast. */
+      airingAt: v.number(),
+    })
+      .index("by_airingAt", ["airingAt"])
+      .index("by_anilistId_episode", ["anilistId", "episode"]),
+
+    /**
+     * Discussion under a title.
+     *
+     * Replies are one level deep: a reply stores the id of the comment it
+     * answers in `rootId` and `isReply` keeps them out of the paginated
+     * top-level feed. Deletes are soft so a thread never loses its context, and
+     * `replyCount` is maintained on write so the UI can label a thread without
+     * counting rows on every render.
+     */
+    comments: defineTable({
+      anilistId: v.number(),
+      userId: v.id("users"),
+      body: v.string(),
+      spoiler: v.boolean(),
+      isReply: v.boolean(),
+      rootId: v.optional(v.id("comments")),
+      replyCount: v.number(),
+      likeCount: v.number(),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+      editedAt: v.optional(v.number()),
+      deletedAt: v.optional(v.number()),
+      deletedByAdmin: v.optional(v.boolean()),
+    })
+      .index("by_target", ["anilistId", "isReply", "createdAt"])
+      .index("by_root", ["rootId", "createdAt"])
+      .index("by_user", ["userId", "createdAt"])
+      .index("by_createdAt", ["createdAt"]),
+
+    /** One row per (comment, user) pair, so a like is idempotent. */
+    commentLikes: defineTable({
+      commentId: v.id("comments"),
+      userId: v.id("users"),
+      createdAt: v.number(),
+    })
+      .index("by_comment", ["commentId"])
+      .index("by_comment_user", ["commentId", "userId"])
+      .index("by_user", ["userId", "createdAt"]),
+
+    /**
+     * Public profile customisation plus the counters the profile shows.
+     * The counters are incremented on write so a profile render never has to
+     * scan the history or comment tables.
+     */
+    profiles: defineTable({
+      userId: v.id("users"),
+      displayName: v.optional(v.string()),
+      tagline: v.optional(v.string()),
+      bio: v.optional(v.string()),
+      location: v.optional(v.string()),
+      website: v.optional(v.string()),
+      /** Accent colour used for the profile banner and initials avatar. */
+      accent: v.optional(v.string()),
+      favoriteGenre: v.optional(v.string()),
+      /** AniList id whose banner is used as the profile header image. */
+      bannerAnilistId: v.optional(v.number()),
+      /** Ordered favourites — the first one supplies the default banner. */
+      favoriteAnimeIds: v.array(v.number()),
+      isPublic: v.boolean(),
+      commentCount: v.number(),
+      /** Distinct titles with at least one recorded episode. */
+      watchedTitleCount: v.number(),
+      watchedEpisodeCount: v.number(),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+      .index("by_userId", ["userId"])
+      .index("by_updatedAt", ["updatedAt"]),
+
+    /** "En son izlenenler" — one row per episode a signed-in user watched. */
+    watchHistory: defineTable({
+      userId: v.id("users"),
+      anilistId: v.number(),
+      /** 0 means a film / single-part title. */
+      episode: v.number(),
+      position: v.number(),
+      duration: v.number(),
+      completed: v.boolean(),
+      watchedAt: v.number(),
+    })
+      .index("by_user", ["userId", "watchedAt"])
+      .index("by_user_anilistId", ["userId", "anilistId"])
+      .index("by_user_anilistId_episode", ["userId", "anilistId", "episode"]),
   },
   {
     schemaValidation: false,
