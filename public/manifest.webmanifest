@@ -1,0 +1,37 @@
+{
+  "name": "Anime Prime — Anime Keşfet",
+  "short_name": "Anime Prime",
+  "description": "Gerçek AniList verisiyle çalışan anime kataloğu: puanlar, kadro, bölümler, fragmanlar ve yasal izleme bağlantıları.",
+  "lang": "tr",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "orientation": "any",
+  "background_color": "#0b0e17",
+  "theme_color": "#0b0e17",
+  "categories": ["entertainment", "video"],
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Katalog",
+      "short_name": "Katalog",
+      "description": "Tüm animeleri tür ve puana göre keşfet",
+      "url": "/anime"
+    }
+  ]
+}
