@@ -197,6 +197,26 @@ const DETAIL_QUERY = `
   }
 `;
 
+/**
+ * Broadcast times for one window, as AniList's `airingSchedules` reports them.
+ * 
+ * This is what the calendar page shows: real broadcast timestamps for real
+ * airing episodes, not a derived guess.
+ */
+const AIRING_QUERY = `
+  ${CARD_FIELDS}
+  query Airing($page: Int, $perPage: Int, $from: Int, $to: Int) {
+    Page(page: $page, perPage: $perPage) {
+      pageInfo { hasNextPage }
+      airingSchedules(airingAt_greater: $from, airingAt_lesser: $to, sort: TIME) {
+        airingAt
+        episode
+        media { ...CardFields }
+      }
+    }
+  }
+`;
+
 // ---------------------------------------------------------------------------
 // Transport
 // ---------------------------------------------------------------------------
@@ -612,4 +632,66 @@ export async function fetchDetail(anilistId: number): Promise<NormalizedDetail |
   const data = await request<{ Media?: Maybe<RawMedia> }>(DETAIL_QUERY, { id: anilistId });
   if (!data.Media?.id) return null;
   return normalizeDetail(data.Media);
+}
+
+export type NormalizedAiring = {
+  episode: number;
+  /** Epoch ms of the broadcast. */
+  airingAt: number;
+  media: NormalizedCard;
+};
+
+/**
+ * Real broadcast entries between two epoch-ms instants, several pages deep.
+ * AniList expects seconds, so the window is converted on the way out and the
+ * timestamps are converted back to ms on the way in.
+ */
+export async function fetchAiring(
+  from: number,
+  to: number,
+  maxPages = 3,
+): Promise<NormalizedAiring[]> {
+  const now = Date.now();
+  const slots: NormalizedAiring[] = [];
+
+  for (let page = 1; page <= maxPages; page += 1) {
+    const data = await request<{
+      Page?: Maybe<{
+        pageInfo?: Maybe<{ hasNextPage?: Maybe<boolean> }>;
+        airingSchedules?: Maybe<
+          Array<
+            Maybe<{
+              airingAt?: Maybe<number>;
+              episode?: Maybe<number>;
+              media?: Maybe<RawMedia>;
+            }>
+          >
+        >;
+      }>;
+    }>(AIRING_QUERY, {
+      page,
+      perPage: 50,
+      from: Math.floor(from / 1000),
+      to: Math.floor(to / 1000),
+    });
+
+    const rows = data.Page?.airingSchedules ?? [];
+    if (rows.length === 0) break;
+
+    for (const row of rows) {
+      const episode = num(row?.episode);
+      const airingAt = num(row?.airingAt);
+      const media = row?.media;
+      if (!episode || !airingAt || !media?.id) continue;
+      slots.push({
+        episode,
+        airingAt: airingAt * 1000,
+        media: normalizeCard(media, now),
+      });
+    }
+
+    if (!data.Page?.pageInfo?.hasNextPage) break;
+  }
+
+  return slots;
 }

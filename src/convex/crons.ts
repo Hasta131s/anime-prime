@@ -13,4 +13,7 @@ for (const list of FEED_ORDER) {
   crons.interval(`warm-${list}-rail`, { hours: 6 }, api.anime.syncFeed, { list });
 }
 
+// Keeps the seven-day broadcast calendar populated without waiting for a visit.
+crons.interval("warm-calendar", { hours: 2 }, api.calendar.syncCalendar, {});
+
 export default crons;

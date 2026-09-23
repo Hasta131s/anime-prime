@@ -1,4 +1,6 @@
+import { CommentSection } from "@/components/comments/comment-section";
 import { AnimeGrid, SectionHeader } from "@/components/site/anime-section";
+import { FavoriteButton } from "@/components/site/favorite-button";
 import { NextEpisodeLabel } from "@/components/site/next-episode";
 import { Panel, StatStrip, Tag } from "@/components/site/panel";
 import { Poster } from "@/components/site/poster";
@@ -209,6 +211,7 @@ function DetailBody({
                   variant={hasSources ? "outline" : "default"}
                   size="lg"
                 />
+                <FavoriteButton anilistId={anime.anilistId} />
                 {streams[0] ? (
                   <a
                     href={streams[0].url}
@@ -496,6 +499,10 @@ function DetailBody({
             />
           </section>
         ) : null}
+
+        <section id="yorumlar" className="scroll-mt-20">
+          <CommentSection anilistId={anime.anilistId} />
+        </section>
       </Container>
     </SiteShell>
   );
