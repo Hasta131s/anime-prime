@@ -1,17 +1,17 @@
+import { Panel, Tag } from "@/components/site/panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api } from "@/convex/_generated/api";
 import { KIND_LABELS, hostLabel, type SourceKind } from "@/convex/sourceView";
-import { cn } from "@/lib/utils";
 import { useMutation, useQuery } from "convex/react";
 import {
   CheckCircle2,
-  Info,
   Loader2,
   Lock,
   Plus,
   ShieldPlus,
   Trash2,
+  TriangleAlert,
 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Link, useLocation } from "react-router";
@@ -19,9 +19,8 @@ import { Link, useLocation } from "react-router";
 /**
  * Source management panel.
  *
- * Only two states are ever rendered for a visitor: the panel for an admin, or
- * the first-run "claim ownership" card while no admin exists. Everyone else
- * sees nothing at all.
+ * Visitors only ever see one of two states: the editor for an admin, or the
+ * first-run ownership card while no admin exists. Everyone else sees nothing.
  */
 export function SourceManager({
   anilistId,
@@ -57,9 +56,7 @@ export function SourceManager({
       await action();
       setSuccess(done);
     } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "İşlem tamamlanamadı.",
-      );
+      setError(cause instanceof Error ? cause.message : "İşlem tamamlanamadı.");
     } finally {
       setBusy(false);
     }
@@ -87,25 +84,23 @@ export function SourceManager({
     });
   };
 
-  // ------------------------------------------------------------- first run
+  // --------------------------------------------------------------- first run
   if (!state.canManage) {
     return (
-      <div className="rounded-2xl border border-white/8 bg-surface-1/70 p-5">
+      <Panel title="Kaynak yönetimi">
         <div className="flex items-start gap-3">
-          <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand/12 text-brand-bright">
-            <ShieldPlus className="size-4" aria-hidden="true" />
-          </span>
+          <ShieldPlus className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
           <div className="min-w-0">
-            <h2 className="font-display text-sm font-bold">
+            <p className="text-[13px] font-medium text-foreground">
               Kaynak yönetimini devral
-            </h2>
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+            </p>
+            <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
               Bu sitede henüz yönetici yok. Oynatılabilir kaynakları yalnızca bir
-              yönetici ekleyebilir. E-posta adresini doğrulamış ilk hesap bu
+              yönetici ekleyebilir; e-posta adresini doğrulamış ilk hesap bu
               yetkiyi bir kez devralabilir.
             </p>
 
-            <div className="mt-4 flex flex-wrap items-center gap-3">
+            <div className="mt-3 flex flex-wrap items-center gap-2">
               {state.signedIn && state.canClaim ? (
                 <Button
                   size="sm"
@@ -123,7 +118,7 @@ export function SourceManager({
               ) : (
                 <Link
                   to={`/auth?returnTo=${encodeURIComponent(location.pathname)}`}
-                  className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                  className="inline-flex h-7 items-center gap-2 rounded-[3px] bg-primary px-3 text-[12px] font-medium text-primary-foreground transition-colors hover:bg-brand-strong"
                 >
                   <Lock className="size-3.5" />
                   E-posta ile giriş yap
@@ -133,40 +128,39 @@ export function SourceManager({
                 {state.signedIn
                   ? state.canClaim
                     ? `Hesap: ${state.email ?? "doğrulanmış e-posta"}`
-                    : "Hesabın doğrulanmış bir e-posta adresi yok."
+                    : "Hesabında doğrulanmış e-posta yok."
                   : "Misafir oturumları yönetici olamaz."}
               </span>
             </div>
 
             {error ? (
-              <p className="mt-3 text-xs text-destructive">{error}</p>
+              <p className="mt-3 text-[12px] text-destructive">{error}</p>
             ) : null}
           </div>
         </div>
-      </div>
+      </Panel>
     );
   }
 
-  // ------------------------------------------------------------ admin panel
+  // -------------------------------------------------------------- admin view
   return (
-    <div className="space-y-5 rounded-2xl border border-brand/25 bg-brand/[0.06] p-5">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="font-display text-sm font-bold">
-            Kaynak yönetimi <span className="text-brand-bright">(yönetici)</span>
-          </h2>
-          <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">
-            HLS (`.m3u8`) veya MP4 bağlantısı ekle. Yalnızca yayınlama hakkına
-            sahip olduğun içerikleri ekle — Anime Prime video barındırmaz.
-          </p>
-        </div>
-      </div>
+    <Panel
+      title="Kaynak yönetimi (yönetici)"
+      action={
+        <span className="text-[10px] text-muted-foreground">
+          HLS / MP4 · yalnızca sen ekleyebilirsin
+        </span>
+      }
+      bodyClassName="p-3.5 space-y-3"
+    >
+      <p className="text-[11px] leading-relaxed text-muted-foreground">
+        Yalnızca yayınlama hakkına sahip olduğun içerikleri ekle. Anime Prime
+        video barındırmaz ve hiçbir siteden akış çekmez.
+      </p>
 
-      <form onSubmit={handleAdd} className="grid gap-3 lg:grid-cols-12">
+      <form onSubmit={handleAdd} className="grid gap-2 lg:grid-cols-12">
         <div className="lg:col-span-2">
-          <label className="mb-1.5 block text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-            Bölüm
-          </label>
+          <label className="stat-label mb-1 block">Bölüm</label>
           <Input
             value={episode}
             onChange={(event) => setEpisode(event.target.value)}
@@ -174,6 +168,7 @@ export function SourceManager({
             list="episode-options"
             placeholder="1"
             aria-label="Bölüm numarası"
+            className="h-9 rounded-[3px] border-input bg-card text-[13px]"
           />
           {episodeCount ? (
             <datalist id="episode-options">
@@ -185,21 +180,18 @@ export function SourceManager({
         </div>
 
         <div className="lg:col-span-3">
-          <label className="mb-1.5 block text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-            Başlık
-          </label>
+          <label className="stat-label mb-1 block">Başlık</label>
           <Input
             value={label}
             onChange={(event) => setLabel(event.target.value)}
             placeholder="Bölüm 1 · Türkçe altyazı"
             aria-label="Kaynak başlığı"
+            className="h-9 rounded-[3px] border-input bg-card text-[13px]"
           />
         </div>
 
         <div className="lg:col-span-4">
-          <label className="mb-1.5 block text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-            Akış adresi
-          </label>
+          <label className="stat-label mb-1 block">Akış adresi</label>
           <Input
             value={url}
             onChange={(event) => setUrl(event.target.value)}
@@ -207,80 +199,78 @@ export function SourceManager({
             type="url"
             required
             aria-label="Akış adresi"
+            className="h-9 rounded-[3px] border-input bg-card text-[13px]"
           />
         </div>
 
         <div className="lg:col-span-3">
-          <label className="mb-1.5 block text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-            Dil / sürüm
-          </label>
+          <label className="stat-label mb-1 block">Dil / sürüm</label>
           <Input
             value={language}
             onChange={(event) => setLanguage(event.target.value)}
             placeholder="Türkçe altyazı"
             aria-label="Dil veya sürüm"
+            className="h-9 rounded-[3px] border-input bg-card text-[13px]"
           />
         </div>
 
         <div className="lg:col-span-9">
-          <label className="mb-1.5 block text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-            Not (isteğe bağlı)
-          </label>
+          <label className="stat-label mb-1 block">Not (isteğe bağlı)</label>
           <Input
             value={note}
             onChange={(event) => setNote(event.target.value)}
             placeholder="Örn. 1080p, altyazı gömülü"
             aria-label="Not"
+            className="h-9 rounded-[3px] border-input bg-card text-[13px]"
           />
         </div>
 
         <div className="flex items-end lg:col-span-3">
-          <Button type="submit" className="w-full rounded-xl" disabled={busy}>
-            {busy ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
+          <Button type="submit" className="w-full" disabled={busy}>
+            {busy ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Plus className="size-4" />
+            )}
             Kaynağı ekle
           </Button>
         </div>
       </form>
 
       {error ? (
-        <p className="flex items-center gap-2 text-xs text-destructive">
-          <Info className="size-3.5" />
+        <p className="flex items-center gap-2 text-[12px] text-destructive">
+          <TriangleAlert className="size-3.5 shrink-0" />
           {error}
         </p>
       ) : null}
       {success ? (
-        <p className="flex items-center gap-2 text-xs text-emerald-300">
-          <CheckCircle2 className="size-3.5" />
+        <p className="flex items-center gap-2 text-[12px] text-brand-live">
+          <CheckCircle2 className="size-3.5 shrink-0" />
           {success}
         </p>
       ) : null}
 
       {sources && sources.length > 0 ? (
-        <ul className="divide-y divide-white/6 overflow-hidden rounded-xl border border-white/8 bg-black/20">
+        <ul className="divide-y divide-border overflow-hidden rounded-[3px] border border-border">
           {sources.map((source) => (
             <li
               key={source.id}
-              className="flex flex-wrap items-center gap-3 px-3 py-2.5"
+              className="flex flex-wrap items-center gap-2 px-2.5 py-2"
             >
-              <span className="rounded-md bg-white/8 px-2 py-0.5 text-[11px] font-semibold">
-                {source.episode === 0 ? "Tek parça" : `Bölüm ${source.episode}`}
-              </span>
-              <span className="min-w-0 flex-1 text-xs">
+              <Tag>{source.episode === 0 ? "Tek parça" : `Bölüm ${source.episode}`}</Tag>
+              <span className="min-w-0 flex-1 truncate text-[12px]">
                 <span className="font-medium text-foreground">{source.label}</span>
                 <span className="ml-2 text-muted-foreground">
                   {hostLabel(source.url)}
                 </span>
               </span>
-              <span
-                className={cn(
-                  "rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase",
-                  source.kind === "hls"
-                    ? "border-brand/40 text-brand-bright"
-                    : "border-white/15 text-muted-foreground",
-                )}
+              <Tag
+                className={
+                  source.kind === "hls" ? "text-primary" : "text-muted-foreground"
+                }
               >
                 {KIND_LABELS[source.kind as SourceKind]}
-              </span>
+              </Tag>
               <Button
                 type="button"
                 variant="ghost"
@@ -298,11 +288,11 @@ export function SourceManager({
           ))}
         </ul>
       ) : (
-        <p className="text-xs text-muted-foreground">
-          Bu yapım için henüz kaynak eklenmemiş. Eklediğin kaynaklar tüm
-          ziyaretçilere görünür.
+        <p className="text-[11px] text-muted-foreground">
+          Bu yapım için henüz kaynak yok. Eklediğin kaynaklar tüm ziyaretçilere
+          görünür.
         </p>
       )}
-    </div>
+    </Panel>
   );
 }

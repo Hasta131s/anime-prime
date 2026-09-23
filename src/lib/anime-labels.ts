@@ -126,6 +126,17 @@ export function formatScore(score?: number) {
   return (score / 10).toFixed(1);
 }
 
+/**
+ * AniList colours scores the same way across the site: green from 70 up,
+ * amber in the sixties, red below that.
+ */
+export function scoreColorClass(score?: number) {
+  if (typeof score !== "number" || score <= 0) return "text-muted-foreground";
+  if (score >= 70) return "text-brand-live";
+  if (score >= 60) return "text-brand-score";
+  return "text-destructive";
+}
+
 const compact = new Intl.NumberFormat("tr-TR", {
   notation: "compact",
   maximumFractionDigits: 1,

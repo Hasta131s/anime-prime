@@ -1,8 +1,8 @@
-import { AnimeRail } from "@/components/site/anime-rail";
-import { AnimeCard } from "@/components/site/anime-card";
-import { Poster } from "@/components/site/poster";
+import { AnimeGrid, SectionHeader } from "@/components/site/anime-section";
 import { NextEpisodeLabel } from "@/components/site/next-episode";
-import { SiteShell } from "@/components/site/site-shell";
+import { Panel, StatStrip, Tag } from "@/components/site/panel";
+import { Poster } from "@/components/site/poster";
+import { Container, SiteShell } from "@/components/site/site-shell";
 import { ErrorCard } from "@/components/site/states";
 import { TrailerButton } from "@/components/site/trailer-dialog";
 import { buttonVariants } from "@/components/ui/button";
@@ -22,23 +22,14 @@ import {
   relationLabel,
   releaseWindow,
   roleLabel,
+  scoreColorClass,
   statusLabel,
   synopsisParagraphs,
 } from "@/lib/anime-labels";
 import { cn } from "@/lib/utils";
 import { formatClock, latestProgressFor } from "@/lib/watch-progress";
 import { useQuery } from "convex/react";
-import {
-  ArrowLeft,
-  CalendarClock,
-  ExternalLink,
-  Info,
-  Play,
-  RotateCcw,
-  Star,
-  Tv,
-  Users,
-} from "lucide-react";
+import { ExternalLink, Play } from "lucide-react";
 import { useMemo, type ReactNode } from "react";
 import { Link, useParams } from "react-router";
 
@@ -106,7 +97,6 @@ function DetailBody({
   message?: string;
   onRetry: () => void;
 }) {
-  // Owner-supplied playable sources (HLS / MP4) for this title.
   const sources = useQuery(api.sources.list, { anilistId: anime.anilistId });
   const hasSources = Boolean(sources && sources.length > 0);
   const resume = useMemo(
@@ -128,9 +118,9 @@ function DetailBody({
 
   return (
     <SiteShell>
-      {/* --------------------------------------------------------- Banner hero */}
-      <section className="relative isolate overflow-hidden">
-        <div className="absolute inset-0 -z-10">
+      {/* -------------------------------------------------------- Header block */}
+      <section className="border-b border-border">
+        <div className="relative h-[150px] w-full sm:h-[210px] lg:h-[260px]">
           {heroImage ? (
             <img
               src={heroImage}
@@ -139,97 +129,76 @@ function DetailBody({
               className="size-full object-cover object-center"
             />
           ) : (
-            <div className="size-full bg-grid opacity-30" />
+            <div className="size-full bg-card" />
           )}
-          <div className="absolute inset-0 bg-linear-to-t from-background via-background/80 to-background/40" />
-          <div className="absolute inset-0 bg-linear-to-r from-background via-background/50 to-transparent" />
+          <div className="absolute inset-0 bg-linear-to-t from-background via-background/75 to-background/30" />
         </div>
 
-        <div className="mx-auto w-full max-w-7xl px-4 pt-6 pb-10 sm:px-6 lg:px-8">
-          <Link
-            to="/anime"
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-white/70 transition-colors hover:text-white sm:text-sm"
-          >
-            <ArrowLeft className="size-3.5" />
-            Kataloğa dön
-          </Link>
-
-          <div className="mt-8 flex flex-col gap-6 sm:flex-row sm:items-end sm:gap-8">
-            <div className="w-28 shrink-0 sm:w-40 lg:w-52">
-              <Poster anime={anime} priority className="shadow-2xl shadow-black/60" />
+        <Container>
+          <div className="-mt-[92px] flex flex-col gap-4 pb-6 sm:-mt-[108px] sm:flex-row sm:gap-6 lg:-mt-[124px]">
+            <div className="w-[104px] shrink-0 sm:w-[150px] lg:w-[200px]">
+              <Poster
+                anime={anime}
+                priority
+                className="border border-border shadow-lg shadow-black/30"
+              />
             </div>
 
             <div className="min-w-0 flex-1">
+              <h1 className="text-cinema text-[22px] leading-tight font-bold text-foreground sm:text-[28px] lg:text-[32px]">
+                {anime.title}
+              </h1>
+
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px]">
+                {anime.titleEnglish && anime.titleEnglish !== anime.title ? (
+                  <span className="text-primary">{anime.titleEnglish}</span>
+                ) : null}
+                {anime.titleNative ? (
+                  <span className="text-muted-foreground">{anime.titleNative}</span>
+                ) : null}
+              </div>
+
+              <StatStrip
+                className="mt-4"
+                stats={[
+                  {
+                    label: "Puan",
+                    value: score,
+                    tone: scoreColorClass(anime.score),
+                  },
+                  {
+                    label: "Popülerlik",
+                    value: formatCount(anime.popularity),
+                  },
+                  { label: "Favori", value: formatCount(anime.favourites) },
+                  { label: "Format", value: formatLabel(anime.format) },
+                  { label: "Bölüm", value: formatEpisodes(anime.episodes) },
+                  { label: "Süre", value: formatDuration(anime.duration) },
+                  { label: "Durum", value: statusLabel(anime.status) },
+                  { label: "Sezon", value: releaseWindow(anime) },
+                ]}
+              />
+
               {anime.genres.length > 0 ? (
-                <div className="mb-3 flex flex-wrap gap-2">
-                  {anime.genres.slice(0, 3).map((genre) => (
-                    <Link
-                      key={genre}
-                      to={`/anime?genre=${encodeURIComponent(genre)}`}
-                      className="rounded-full border border-white/15 bg-black/30 px-2.5 py-1 text-[11px] font-medium text-white/80 backdrop-blur-sm transition-colors hover:border-brand/60 hover:text-white"
-                    >
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {anime.genres.map((genre) => (
+                    <Tag key={genre} to={`/anime?genre=${encodeURIComponent(genre)}`}>
                       {genreLabel(genre)}
-                    </Link>
+                    </Tag>
                   ))}
                 </div>
               ) : null}
 
-              <h1 className="text-cinema text-3xl leading-[1.08] font-extrabold text-white sm:text-4xl lg:text-5xl">
-                {anime.title}
-              </h1>
-
-              <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-white/65">
-                {anime.titleEnglish && anime.titleEnglish !== anime.title ? (
-                  <span>{anime.titleEnglish}</span>
-                ) : null}
-                {anime.titleNative ? <span>{anime.titleNative}</span> : null}
-              </div>
-
-              <div className="mt-5 flex flex-wrap items-center gap-2 text-xs font-medium text-white/85 sm:text-sm">
-                {score ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-md bg-white/10 px-2.5 py-1 backdrop-blur-sm">
-                    <Star className="size-3.5 text-amber-300" aria-hidden="true" />
-                    {score} / 10
-                  </span>
-                ) : null}
-                {releaseWindow(anime) ? (
-                  <span className="rounded-md bg-white/10 px-2.5 py-1 backdrop-blur-sm">
-                    {releaseWindow(anime)}
-                  </span>
-                ) : null}
-                {formatLabel(anime.format) ? (
-                  <span className="rounded-md bg-white/10 px-2.5 py-1 backdrop-blur-sm">
-                    {formatLabel(anime.format)}
-                  </span>
-                ) : null}
-                {formatEpisodes(anime.episodes) ? (
-                  <span className="rounded-md bg-white/10 px-2.5 py-1 backdrop-blur-sm">
-                    {formatEpisodes(anime.episodes)}
-                  </span>
-                ) : null}
-                {statusLabel(anime.status) ? (
-                  <span className="rounded-md bg-white/10 px-2.5 py-1 backdrop-blur-sm">
-                    {statusLabel(anime.status)}
-                  </span>
-                ) : null}
-              </div>
-
               <NextEpisodeLabel
                 episode={anime.nextEpisode}
                 airingAt={anime.nextEpisodeAt}
-                className="mt-4 text-xs text-brand-cyan"
+                className="mt-3"
               />
 
-              <div className="mt-6 flex flex-wrap items-center gap-3">
+              <div className="mt-4 flex flex-wrap items-center gap-2">
                 {hasSources ? (
-                  <Link
-                    to={watchHref}
-                    className={cn(
-                      buttonVariants({ size: "lg" }),
-                      "rounded-full px-6 text-sm font-semibold",
-                    )}
-                  >
-                    <Play className="fill-current" />
+                  <Link to={watchHref} className={buttonVariants({ size: "lg" })}>
+                    <Play className="size-4 fill-current" />
                     İzle
                   </Link>
                 ) : null}
@@ -238,24 +207,17 @@ function DetailBody({
                   trailerSite={anime.trailerSite}
                   title={anime.title}
                   variant={hasSources ? "outline" : "default"}
-                  className={cn(
-                    "rounded-full px-6 text-sm font-semibold",
-                    hasSources &&
-                      "border-white/20 bg-white/5 text-white hover:bg-white/12 hover:text-white",
-                  )}
+                  size="lg"
                 />
-                {!hasSources && streams[0] ? (
+                {streams[0] ? (
                   <a
                     href={streams[0].url}
                     target="_blank"
                     rel="noreferrer noopener"
-                    className={cn(
-                      buttonVariants({ variant: "outline", size: "lg" }),
-                      "rounded-full border-white/20 bg-white/5 px-6 text-sm text-white hover:bg-white/12 hover:text-white",
-                    )}
+                    className={buttonVariants({ variant: "outline", size: "lg" })}
                   >
-                    {streams[0].site}&apos;de izle
-                    <ExternalLink />
+                    {streams[0].site}
+                    <ExternalLink className="size-4" />
                   </a>
                 ) : null}
                 {anime.siteUrl ? (
@@ -263,7 +225,7 @@ function DetailBody({
                     href={anime.siteUrl}
                     target="_blank"
                     rel="noreferrer noopener"
-                    className="text-sm font-medium text-white/70 underline-offset-4 transition-colors hover:text-white hover:underline"
+                    className="text-[12px] font-medium text-primary hover:underline"
                   >
                     AniList kaydı
                   </a>
@@ -271,73 +233,71 @@ function DetailBody({
               </div>
 
               {hasSources && resume ? (
-                <p className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-brand-cyan">
-                  <RotateCcw className="size-3.5" aria-hidden="true" />
+                <p className="mt-3 text-[12px] text-muted-foreground">
                   Kaldığın yer:{" "}
-                  {resume.episode === 0 ? "Tek parça" : `Bölüm ${resume.episode}`}
-                  {" · "}
-                  {formatClock(resume.position)}
+                  <span className="font-medium text-brand-live">
+                    {resume.episode === 0 ? "Tek parça" : `Bölüm ${resume.episode}`} ·{" "}
+                    {formatClock(resume.position)}
+                  </span>
                 </p>
               ) : null}
             </div>
           </div>
-        </div>
+        </Container>
       </section>
 
-      {status === "error" ? (
-        <div className="mx-auto w-full max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
+      <Container className="space-y-8 py-8">
+        {status === "error" ? (
           <ErrorCard
             title="Detaylar eksik görünebilir"
             message={message}
             onRetry={onRetry}
           />
-        </div>
-      ) : null}
+        ) : null}
 
-      <div className="mx-auto w-full max-w-7xl px-4 pt-10 sm:px-6 lg:px-8">
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-12">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
           {/* ------------------------------------------------------ Main column */}
-          <div className="min-w-0 space-y-12">
+          <div className="min-w-0 space-y-6">
             {paragraphs.length > 0 ? (
-              <Section icon={<Info className="size-4" />} title="Konu">
-                <div className="space-y-3 text-sm leading-relaxed text-muted-foreground sm:text-[15px]">
+              <Panel title="Konu">
+                <div className="space-y-3 text-[13px] leading-relaxed text-muted-foreground">
                   {paragraphs.map((paragraph, index) => (
                     <p key={index}>{paragraph}</p>
                   ))}
                 </div>
-              </Section>
+              </Panel>
             ) : null}
 
             {characters.length > 0 ? (
-              <Section icon={<Users className="size-4" />} title="Karakterler ve seslendirme">
-                <div className="grid gap-3 sm:grid-cols-2">
+              <Panel title="Karakterler ve seslendirme">
+                <div className="grid gap-2 sm:grid-cols-2">
                   {characters.map((character) => (
                     <div
                       key={character.name}
-                      className="flex items-center gap-3 rounded-xl border border-white/8 bg-surface-1/70 p-2.5"
+                      className="flex items-center gap-2.5 rounded-[3px] border border-border bg-background/40 p-2"
                     >
                       {character.image ? (
                         <img
                           src={character.image}
                           alt={character.name}
                           loading="lazy"
-                          className="size-14 shrink-0 rounded-lg object-cover object-top"
+                          className="size-12 shrink-0 rounded-[2px] object-cover object-top"
                         />
                       ) : (
-                        <div className="size-14 shrink-0 rounded-lg bg-white/5" />
+                        <div className="size-12 shrink-0 rounded-[2px] bg-accent" />
                       )}
                       <div className="min-w-0 flex-1">
-                        <p className="line-clamp-1 text-sm font-semibold">
+                        <p className="line-clamp-1 text-[12px] font-medium text-foreground">
                           {character.name}
                         </p>
                         {roleLabel(character.role) ? (
-                          <p className="text-[11px] tracking-wide text-brand-bright uppercase">
+                          <p className="text-[10px] text-primary">
                             {roleLabel(character.role)}
                           </p>
                         ) : null}
                         {character.voiceActor ? (
-                          <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
-                            Ses: {character.voiceActor}
+                          <p className="line-clamp-1 text-[10px] text-muted-foreground">
+                            {character.voiceActor}
                           </p>
                         ) : null}
                       </div>
@@ -346,29 +306,32 @@ function DetailBody({
                           src={character.voiceImage}
                           alt={character.voiceActor ?? ""}
                           loading="lazy"
-                          className="size-9 shrink-0 rounded-full object-cover"
+                          className="size-8 shrink-0 rounded-full object-cover"
                         />
                       ) : null}
                     </div>
                   ))}
                 </div>
-              </Section>
+              </Panel>
             ) : null}
 
             {episodes.length > 0 ? (
-              <Section
-                icon={<Tv className="size-4" />}
+              <Panel
                 title="Bölümler"
-                hint="Bölüm başlıkları ve görselleri yayın platformundan gelir."
+                action={
+                  <span className="text-[10px] text-muted-foreground">
+                    Görseller yayın platformundan
+                  </span>
+                }
               >
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {episodes.map((episode, index) => (
                     <a
                       key={`${episode.url}-${index}`}
                       href={episode.url}
                       target="_blank"
                       rel="noreferrer noopener"
-                      className="group overflow-hidden rounded-xl border border-white/8 bg-surface-1/70 transition-colors hover:border-brand/50"
+                      className="group overflow-hidden rounded-[3px] border border-border bg-background/40 transition-colors hover:border-primary/60"
                     >
                       {episode.thumbnail ? (
                         <img
@@ -378,14 +341,14 @@ function DetailBody({
                           className="aspect-video w-full object-cover"
                         />
                       ) : (
-                        <div className="aspect-video w-full bg-white/[0.04]" />
+                        <div className="aspect-video w-full bg-accent" />
                       )}
-                      <div className="p-2.5">
-                        <p className="line-clamp-2 text-xs font-medium transition-colors group-hover:text-brand-bright">
+                      <div className="p-2">
+                        <p className="line-clamp-2 text-[11px] font-medium text-foreground group-hover:text-primary">
                           {episode.title}
                         </p>
                         {episode.site ? (
-                          <p className="mt-1 text-[11px] text-muted-foreground">
+                          <p className="mt-0.5 text-[10px] text-muted-foreground">
                             {episode.site}
                           </p>
                         ) : null}
@@ -393,160 +356,157 @@ function DetailBody({
                     </a>
                   ))}
                 </div>
-              </Section>
-            ) : null}
-
-            {relations.length > 0 ? (
-              <Section icon={<Tv className="size-4" />} title="İlgili yapımlar">
-                <RefGrid items={relations} showRelation />
-              </Section>
+              </Panel>
             ) : null}
           </div>
 
           {/* ---------------------------------------------------------- Sidebar */}
-          <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
-            <div className="rounded-2xl border border-white/8 bg-surface-1/70 p-5">
-              <h2 className="font-display text-sm font-bold tracking-wide">
-                Bilgiler
-              </h2>
-              <dl className="mt-4 space-y-3 text-sm">
-                <InfoRow label="Tür" value={formatLabel(anime.format)} />
-                <InfoRow label="Durum" value={statusLabel(anime.status)} />
-                <InfoRow
-                  label="Bölüm"
-                  value={
-                    anime.episodes
-                      ? `${anime.episodes}${anime.duration ? ` × ${formatDuration(anime.duration)}` : ""}`
-                      : undefined
-                  }
-                />
-                <InfoRow label="Sezon" value={releaseWindow(anime)} />
-                <InfoRow
-                  label="Stüdyo"
-                  value={anime.studios.length > 0 ? anime.studios.join(", ") : undefined}
-                />
-                <InfoRow
-                  label="AniList puanı"
-                  value={score ? `${score} / 10` : undefined}
-                />
-                <InfoRow
-                  label="Popülerlik"
-                  value={formatCount(anime.popularity)}
-                />
-                <InfoRow label="Favori" value={formatCount(anime.favourites)} />
-              </dl>
-            </div>
-
-            {anime.nextEpisodeAt ? (
-              <div className="rounded-2xl border border-brand/25 bg-brand/8 p-5">
-                <h2 className="font-display flex items-center gap-2 text-sm font-bold">
-                  <CalendarClock className="size-4 text-brand-bright" />
-                  Yayın takvimi
-                </h2>
-                <p className="mt-3 text-sm text-foreground">
-                  Bölüm {anime.nextEpisode} · {formatRelative(anime.nextEpisodeAt)}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {formatDateTime(anime.nextEpisodeAt)}
-                </p>
-              </div>
-            ) : null}
-
-            <div className="rounded-2xl border border-white/8 bg-surface-1/70 p-5">
-              <h2 className="font-display text-sm font-bold">Nerede izlenir</h2>
+          <aside className="space-y-4 lg:sticky lg:top-[72px] lg:self-start">
+            <Panel title="Nerede izlenir">
               {streams.length > 0 ? (
-                <ul className="mt-4 space-y-2">
+                <ul className="space-y-1.5">
                   {streams.map((stream) => (
                     <li key={stream.site}>
                       <a
                         href={stream.url}
                         target="_blank"
                         rel="noreferrer noopener"
-                        className="flex items-center gap-3 rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2.5 transition-colors hover:border-brand/50 hover:bg-white/[0.06]"
+                        className="flex items-center gap-2.5 rounded-[3px] border border-border bg-background/40 px-2.5 py-2 transition-colors hover:border-primary/60"
                       >
                         {stream.icon ? (
                           <img
                             src={stream.icon}
                             alt=""
-                            className="size-5 shrink-0 rounded-sm object-contain"
+                            className="size-4 shrink-0 object-contain"
                           />
                         ) : null}
-                        <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                        <span className="min-w-0 flex-1 truncate text-[12px] font-medium">
                           {stream.site}
                         </span>
-                        <ExternalLink className="size-3.5 shrink-0 text-muted-foreground" />
+                        <ExternalLink className="size-3 shrink-0 text-muted-foreground" />
                       </a>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                  AniList bu yapım için lisanslı bir yayın platformu bildirmiyor.
-                  Yeni bir platform eklendiğinde bu bölüm otomatik güncellenir.
+                <p className="text-[12px] leading-relaxed text-muted-foreground">
+                  AniList bu yapım için lisanslı bir platform bildirmiyor. Yeni bir
+                  platform eklendiğinde burası otomatik güncellenir.
                 </p>
               )}
-              <p className="mt-4 border-t border-white/6 pt-3 text-[11px] leading-relaxed text-muted-foreground">
+              <p className="mt-3 border-t border-border pt-2.5 text-[10px] leading-relaxed text-muted-foreground">
                 Anime Prime video barındırmaz; bağlantılar lisanslı platformlara
                 yönlendirir.
               </p>
-            </div>
+            </Panel>
+
+            <Panel title="Bilgiler">
+              <dl className="space-y-2 text-[12px]">
+                <InfoRow label="Tür" value={formatLabel(anime.format)} />
+                <InfoRow label="Durum" value={statusLabel(anime.status)} />
+                <InfoRow
+                  label="Bölüm"
+                  value={formatEpisodes(anime.episodes)}
+                />
+                <InfoRow label="Süre" value={formatDuration(anime.duration)} />
+                <InfoRow label="Sezon" value={releaseWindow(anime)} />
+                <InfoRow
+                  label="Stüdyo"
+                  value={anime.studios.length > 0 ? anime.studios.join(", ") : undefined}
+                />
+                <InfoRow label="Puan" value={score ? `${score} / 10` : undefined} />
+                <InfoRow label="Popülerlik" value={formatCount(anime.popularity)} />
+                <InfoRow label="Favori" value={formatCount(anime.favourites)} />
+              </dl>
+            </Panel>
+
+            {anime.nextEpisodeAt ? (
+              <Panel title="Yayın takvimi">
+                <p className="text-[12px] text-foreground">
+                  Bölüm {anime.nextEpisode} ·{" "}
+                  <span className="font-medium text-brand-live">
+                    {formatRelative(anime.nextEpisodeAt)}
+                  </span>
+                </p>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  {formatDateTime(anime.nextEpisodeAt)}
+                </p>
+              </Panel>
+            ) : null}
           </aside>
         </div>
 
-        {/* ---------------------------------------------------- Recommendations */}
+        {/* -------------------------------------------------------- Related grids */}
+        {relations.length > 0 ? (
+          <section>
+            <SectionHeader title="İlgili yapımlar" />
+            <div className="space-y-4">
+              {["PREQUEL", "SEQUEL", "SIDE_STORY", "ALTERNATIVE", "SPIN_OFF"]
+                .map((relation) => ({
+                  relation,
+                  items: relations.filter((item) => item.relationType === relation),
+                }))
+                .filter((group) => group.items.length > 0)
+                .map((group) => (
+                  <div key={group.relation}>
+                    <p className="stat-label mb-2">{relationLabel(group.relation)}</p>
+                    <AnimeGrid items={group.items.map(refToCard)} priorityCount={0} />
+                  </div>
+                ))}
+              {relations.some(
+                (item) =>
+                  !["PREQUEL", "SEQUEL", "SIDE_STORY", "ALTERNATIVE", "SPIN_OFF"].includes(
+                    item.relationType ?? "",
+                  ),
+              ) ? (
+                <div>
+                  <p className="stat-label mb-2">Diğer</p>
+                  <AnimeGrid
+                    items={relations
+                      .filter(
+                        (item) =>
+                          ![
+                            "PREQUEL",
+                            "SEQUEL",
+                            "SIDE_STORY",
+                            "ALTERNATIVE",
+                            "SPIN_OFF",
+                          ].includes(item.relationType ?? ""),
+                      )
+                      .map(refToCard)}
+                    priorityCount={0}
+                  />
+                </div>
+              ) : null}
+            </div>
+          </section>
+        ) : null}
+
         {recommendations.length > 0 ? (
-          <div className="mt-16">
-            <AnimeRail
+          <section>
+            <SectionHeader
               title="Benzer animeler"
               blurb="AniList kullanıcılarının birlikte önerdiği yapımlar."
-              items={recommendations.map((item) => refToCard(item))}
-              status="ready"
               href="/anime"
             />
-          </div>
+            <AnimeGrid
+              items={recommendations.map(refToCard)}
+              limit={12}
+              priorityCount={0}
+            />
+          </section>
         ) : null}
-      </div>
+      </Container>
     </SiteShell>
-  );
-}
-
-function Section({
-  title,
-  hint,
-  icon,
-  children,
-}: {
-  title: string;
-  hint?: string;
-  icon?: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <section className="space-y-4">
-      <div className="flex items-center gap-2.5 border-b border-white/6 pb-3">
-        {icon ? (
-          <span className="flex size-8 items-center justify-center rounded-lg bg-brand/12 text-brand-bright">
-            {icon}
-          </span>
-        ) : null}
-        <div>
-          <h2 className="font-display text-base font-extrabold sm:text-lg">
-            {title}
-          </h2>
-          {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
-        </div>
-      </div>
-      {children}
-    </section>
   );
 }
 
 function InfoRow({ label, value }: { label: string; value?: string }) {
   if (!value) return null;
   return (
-    <div className="flex items-start justify-between gap-4">
+    <div className="flex items-start justify-between gap-3">
       <dt className="shrink-0 text-muted-foreground">{label}</dt>
-      <dd className="text-right font-medium">{value}</dd>
+      <dd className="text-right font-medium text-foreground">{value}</dd>
     </div>
   );
 }
@@ -565,29 +525,6 @@ function refToCard(ref: TitleRefView) {
   };
 }
 
-function RefGrid({
-  items,
-  showRelation = false,
-}: {
-  items: TitleRefView[];
-  showRelation?: boolean;
-}) {
-  return (
-    <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 lg:grid-cols-4">
-      {items.map((item) => (
-        <div key={item.anilistId} className="space-y-2">
-          <AnimeCard anime={refToCard(item)} />
-          {showRelation && relationLabel(item.relationType) ? (
-            <p className="text-center text-[11px] tracking-wide text-muted-foreground uppercase">
-              {relationLabel(item.relationType)}
-            </p>
-          ) : null}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function DetailMessage({
   title,
   description,
@@ -596,40 +533,31 @@ function DetailMessage({
   description: string;
 }) {
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col items-center gap-4 px-4 py-24 text-center sm:py-32">
-      <h1 className="font-display text-2xl font-extrabold">{title}</h1>
-      <p className="text-sm text-muted-foreground">{description}</p>
-      <Link
-        to="/anime"
-        className={cn(buttonVariants({ variant: "outline" }), "rounded-full")}
-      >
+    <Container className="flex flex-col items-center gap-4 py-24 text-center">
+      <h1 className="text-[20px] font-semibold text-foreground">{title}</h1>
+      <p className="max-w-md text-[13px] text-muted-foreground">{description}</p>
+      <Link to="/anime" className={buttonVariants({ variant: "outline" })}>
         Kataloğa dön
       </Link>
-    </div>
+    </Container>
   );
 }
 
-function DetailSkeleton() {
+function DetailSkeleton({ children }: { children?: ReactNode }) {
   return (
-    <div className="mx-auto w-full max-w-7xl animate-pulse px-4 pt-16 sm:px-6 lg:px-8">
-      <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:gap-8">
-        <div className="aspect-[2/3] w-28 rounded-xl bg-white/[0.05] sm:w-40 lg:w-52" />
-        <div className="flex-1 space-y-4">
-          <div className="h-4 w-24 rounded-full bg-white/[0.05]" />
-          <div className="h-10 w-3/4 rounded-lg bg-white/[0.06]" />
-          <div className="h-4 w-1/2 rounded-md bg-white/[0.05]" />
-          <div className="h-11 w-52 rounded-full bg-white/[0.06]" />
+    <>
+      <div className="relative h-[150px] w-full animate-pulse bg-card sm:h-[210px] lg:h-[260px]" />
+      <Container>
+        <div className="-mt-[92px] flex gap-6 pb-6 sm:-mt-[108px] lg:-mt-[124px]">
+          <div className="aspect-[2/3] w-[104px] shrink-0 animate-pulse rounded-[3px] bg-card sm:w-[150px] lg:w-[200px]" />
+          <div className="flex-1 space-y-3 pt-10">
+            <div className="h-7 w-2/3 animate-pulse rounded-[2px] bg-card" />
+            <div className="h-12 w-full max-w-lg animate-pulse rounded-[3px] bg-card" />
+            <div className="h-9 w-56 animate-pulse rounded-[3px] bg-card" />
+          </div>
         </div>
-      </div>
-      <div className="mt-14 grid gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="space-y-4">
-          <div className="h-5 w-32 rounded bg-white/[0.06]" />
-          <div className="h-4 w-full rounded bg-white/[0.04]" />
-          <div className="h-4 w-full rounded bg-white/[0.04]" />
-          <div className="h-4 w-3/4 rounded bg-white/[0.04]" />
-        </div>
-        <div className="h-64 rounded-2xl bg-white/[0.04]" />
-      </div>
-    </div>
+      </Container>
+      {children}
+    </>
   );
 }

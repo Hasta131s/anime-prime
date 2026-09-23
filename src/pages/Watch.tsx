@@ -1,8 +1,9 @@
 import { SourceManager } from "@/components/player/source-manager";
 import { VideoPlayer } from "@/components/player/video-player";
-import { SiteShell } from "@/components/site/site-shell";
+import { Panel } from "@/components/site/panel";
+import { Container, SiteShell } from "@/components/site/site-shell";
 import { CardGridSkeleton, EmptyCard } from "@/components/site/states";
-import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { api } from "@/convex/_generated/api";
 import {
   KIND_LABELS,
@@ -20,16 +21,7 @@ import {
   saveProgress,
 } from "@/lib/watch-progress";
 import { useQuery } from "convex/react";
-import {
-  ArrowLeft,
-  ChevronRight,
-  ExternalLink,
-  Info,
-  ListVideo,
-  MonitorPlay,
-  RotateCcw,
-  ShieldAlert,
-} from "lucide-react";
+import { ChevronRight, ExternalLink, MonitorPlay } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 
@@ -44,10 +36,7 @@ export default function Watch() {
   const { anime, isLoading: animeLoading } = useAnimeDetail(
     valid ? anilistId : 0,
   );
-  const sources = useQuery(
-    api.sources.list,
-    valid ? { anilistId } : "skip",
-  );
+  const sources = useQuery(api.sources.list, valid ? { anilistId } : "skip");
 
   useDocumentTitle(anime ? `${anime.title} izle` : "İzle");
 
@@ -64,7 +53,8 @@ export default function Watch() {
 
   const requestedEpisode = Number(searchParams.get("b"));
   const resume = useMemo(
-    () => (valid && sources && sources.length > 0 ? latestProgressFor(anilistId) : null),
+    () =>
+      valid && sources && sources.length > 0 ? latestProgressFor(anilistId) : null,
     [valid, anilistId, sources],
   );
 
@@ -89,13 +79,12 @@ export default function Watch() {
     episodeSources.find((source) => source.id === requestedSourceId) ??
     episodeSources[0];
 
-  // Reads the saved position once per episode/source so the player can seek
-  // into it on attach without the parent ever re-seeking mid-playback.
+  // Reads the saved position once per episode/source so the player can seek into
+  // it on attach without the parent ever re-seeking mid-playback.
   const startAt = useMemo(() => {
     if (!valid || !activeSource) return 0;
     return getProgress(anilistId, activeEpisode)?.position ?? 0;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [valid, anilistId, activeEpisode, activeSource?.id, restartToken]);
+  }, [valid, anilistId, activeEpisode, activeSource, restartToken]);
 
   const selectEpisode = (episode: number) => {
     const next = new URLSearchParams(searchParams);
@@ -118,18 +107,15 @@ export default function Watch() {
     setRestartToken((value) => value + 1);
   };
 
-  // ------------------------------------------------------------ guard rails
   if (!valid) {
     return (
       <SiteShell>
-        <div className="mx-auto max-w-xl px-4 py-24 text-center">
-          <h1 className="font-display text-2xl font-extrabold">
-            Geçersiz bağlantı
-          </h1>
-          <p className="mt-3 text-sm text-muted-foreground">
+        <Container className="py-24 text-center">
+          <h1 className="text-[20px] font-semibold">Geçersiz bağlantı</h1>
+          <p className="mt-2 text-[13px] text-muted-foreground">
             Bu adres bir AniList kaydına karşılık gelmiyor.
           </p>
-        </div>
+        </Container>
       </SiteShell>
     );
   }
@@ -139,12 +125,10 @@ export default function Watch() {
   if (loading || (!anime && episodes.length === 0)) {
     return (
       <SiteShell>
-        <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-          <div className="aspect-video w-full animate-pulse rounded-2xl bg-white/[0.04]" />
-          <div className="mt-6">
-            <CardGridSkeleton count={3} />
-          </div>
-        </div>
+        <Container className="py-6">
+          <div className="aspect-video w-full animate-pulse rounded-[3px] bg-card" />
+          <CardGridSkeleton count={6} className="mt-6" />
+        </Container>
       </SiteShell>
     );
   }
@@ -153,30 +137,28 @@ export default function Watch() {
 
   return (
     <SiteShell>
-      <div className="mx-auto w-full max-w-7xl px-4 pt-8 sm:px-6 lg:px-8">
-        {/* ------------------------------------------------------- Breadcrumb */}
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+      <Container className="py-6">
+        <nav className="mb-3 flex flex-wrap items-center gap-2 text-[12px] text-muted-foreground">
           <Link
             to={`/anime/${anilistId}`}
-            className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground"
+            className="transition-colors hover:text-primary"
           >
-            <ArrowLeft className="size-3.5" />
             {anime?.title ?? "Yapım sayfası"}
           </Link>
           <ChevronRight className="size-3" aria-hidden="true" />
           <span className="text-foreground">İzle</span>
-        </div>
+        </nav>
 
         {episodes.length === 0 || !activeSource ? (
-          <div className="mt-6 space-y-6">
+          <div className="space-y-5">
             <EmptyCard
               title="Bu yapım için oynatılabilir kaynak yok"
-              description="Anime Prime hiçbir siteden akış çekmez. Kaynaklar site yöneticisi tarafından eklenir; eklenene kadar aşağıdaki lisanslı platformlardan izleyebilirsin."
+              description="Anime Prime hiçbir siteden akış çekmez. Kaynaklar site yöneticisi tarafından eklenir; eklenene kadar aşağıdaki lisanslı platformlara bakabilirsin."
             >
-              <div className="flex flex-wrap justify-center gap-3">
+              <div className="flex flex-wrap justify-center gap-2">
                 <Link
                   to={`/anime/${anilistId}`}
-                  className={cn(buttonVariants({ variant: "outline" }), "rounded-full")}
+                  className="inline-flex h-9 items-center rounded-[3px] border border-border bg-card px-4 text-[13px] font-medium transition-colors hover:bg-accent"
                 >
                   Yapım sayfasına dön
                 </Link>
@@ -185,29 +167,26 @@ export default function Watch() {
                     href={anime.streams[0].url}
                     target="_blank"
                     rel="noreferrer noopener"
-                    className={cn(buttonVariants(), "rounded-full")}
+                    className="inline-flex h-9 items-center gap-2 rounded-[3px] bg-primary px-4 text-[13px] font-medium text-primary-foreground transition-colors hover:bg-brand-strong"
                   >
-                    {anime.streams[0].site}&apos;de izle
-                    <ExternalLink />
+                    {anime.streams[0].site}
+                    <ExternalLink className="size-3.5" />
                   </a>
                 ) : null}
               </div>
             </EmptyCard>
 
-            <SourceManager
-              anilistId={anilistId}
-              episodeCount={anime?.episodes}
-            />
+            <SourceManager anilistId={anilistId} episodeCount={anime?.episodes} />
           </div>
         ) : (
-          <div className="mt-5 grid gap-8 xl:grid-cols-[minmax(0,1fr)_320px] xl:gap-10">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
             {/* ---------------------------------------------------- Main column */}
-            <div className="min-w-0 space-y-5">
+            <div className="min-w-0 space-y-4">
               <div>
-                <h1 className="font-display text-xl font-extrabold sm:text-2xl">
+                <h1 className="text-[18px] font-semibold text-foreground sm:text-[20px]">
                   {anime?.title}
                 </h1>
-                <p className="mt-1 text-sm text-muted-foreground">
+                <p className="mt-0.5 text-[12px] text-muted-foreground">
                   {activeEpisode === 0 ? "Tek parça" : `Bölüm ${activeEpisode}`}
                   {" · "}
                   {activeSource.label}
@@ -232,150 +211,123 @@ export default function Watch() {
                 }}
               />
 
-              {/* progress / restart row */}
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
-                {startAt > 0 ? (
-                  <span className="inline-flex items-center gap-1.5">
-                    <RotateCcw className="size-3.5" />
-                    {formatClock(startAt)} konumundan devam ediliyor
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5">
-                    <MonitorPlay className="size-3.5" />
-                    İlerlemen bu cihazda saklanır
-                  </span>
-                )}
-                <button
-                  type="button"
-                  onClick={restart}
-                  className="rounded-full border border-white/10 px-3 py-1 font-medium text-foreground transition-colors hover:border-brand/50"
-                >
+              <div className="flex flex-wrap items-center gap-2 text-[12px] text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5">
+                  <MonitorPlay className="size-3.5" aria-hidden="true" />
+                  {startAt > 0
+                    ? `${formatClock(startAt)} konumundan devam ediliyor`
+                    : "İlerlemen bu cihazda saklanır"}
+                </span>
+                <Button variant="outline" size="sm" onClick={restart}>
                   Baştan başlat
-                </button>
+                </Button>
                 {finishedEpisode === activeEpisode && nextEpisode !== undefined ? (
-                  <button
-                    type="button"
-                    onClick={() => selectEpisode(nextEpisode)}
-                    className="rounded-full bg-brand px-3 py-1 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
-                  >
+                  <Button size="sm" onClick={() => selectEpisode(nextEpisode)}>
                     Sonraki bölüm: {nextEpisode}
-                  </button>
+                  </Button>
                 ) : null}
               </div>
 
-              {/* source switcher */}
               {episodeSources.length > 1 ? (
-                <div className="rounded-2xl border border-white/8 bg-surface-1/70 p-4">
-                  <h2 className="font-display text-sm font-bold">
-                    Bu bölümdeki kaynaklar
-                  </h2>
-                  <div className="mt-3 flex flex-wrap gap-2">
+                <Panel title="Bu bölümdeki kaynaklar">
+                  <div className="flex flex-wrap gap-1.5">
                     {episodeSources.map((source) => (
                       <button
                         key={source.id}
                         type="button"
                         onClick={() => selectSource(source)}
                         className={cn(
-                          "rounded-xl border px-3 py-2 text-left text-xs transition-colors",
+                          "rounded-[3px] border px-2.5 py-1.5 text-left text-[11px] transition-colors",
                           source.id === activeSource.id
-                            ? "border-brand/60 bg-brand/12 text-foreground"
-                            : "border-white/10 bg-white/[0.03] text-muted-foreground hover:text-foreground",
+                            ? "border-primary bg-primary/15 text-foreground"
+                            : "border-border bg-background/40 text-muted-foreground hover:text-foreground",
                         )}
                       >
-                        <span className="block font-semibold">{source.label}</span>
-                        <span className="mt-0.5 block text-[11px] opacity-80">
+                        <span className="block font-medium">{source.label}</span>
+                        <span className="mt-0.5 block opacity-80">
                           {hostLabel(source.url)} · {KIND_LABELS[source.kind]}
                         </span>
                       </button>
                     ))}
                   </div>
-                </div>
+                </Panel>
               ) : null}
 
-              <SourceManager
-                anilistId={anilistId}
-                episodeCount={anime?.episodes}
-              />
+              <SourceManager anilistId={anilistId} episodeCount={anime?.episodes} />
             </div>
 
             {/* ------------------------------------------------------- Sidebar */}
-            <aside className="space-y-6">
-              <div className="rounded-2xl border border-white/8 bg-surface-1/70 p-5">
-                <h2 className="font-display flex items-center gap-2 text-sm font-bold">
-                  <ListVideo className="size-4 text-brand-bright" />
-                  Bölümler
-                </h2>
-                <div className="mt-3 flex flex-wrap gap-2">
+            <aside className="space-y-4">
+              <Panel title="Bölümler">
+                <div className="flex flex-wrap gap-1.5">
                   {episodes.map(([episode]) => (
                     <button
                       key={episode}
                       type="button"
                       onClick={() => selectEpisode(episode)}
+                      aria-label={episode === 0 ? "Tek parça" : `Bölüm ${episode}`}
                       className={cn(
-                        "flex size-9 items-center justify-center rounded-lg border text-xs font-semibold transition-colors",
+                        "flex size-8 items-center justify-center rounded-[3px] border text-[12px] font-medium transition-colors",
                         episode === activeEpisode
-                          ? "border-brand/60 bg-brand/18 text-foreground"
-                          : "border-white/10 bg-white/[0.03] text-muted-foreground hover:text-foreground",
+                          ? "border-primary bg-primary/15 text-foreground"
+                          : "border-border bg-background/40 text-muted-foreground hover:text-foreground",
                       )}
-                      aria-label={
-                        episode === 0 ? "Tek parça" : `Bölüm ${episode}`
-                      }
                     >
                       {episode === 0 ? "★" : episode}
                     </button>
                   ))}
                 </div>
                 {anime?.episodes &&
-                anime.episodes > episodes.filter(([episode]) => episode > 0).length ? (
-                  <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
+                anime.episodes >
+                  episodes.filter(([episode]) => episode > 0).length ? (
+                  <p className="mt-3 border-t border-border pt-2.5 text-[10px] leading-relaxed text-muted-foreground">
                     AniList bu yapım için {anime.episodes} bölüm bildiriyor;{" "}
                     {episodes.filter(([episode]) => episode > 0).length} bölümün
                     kaynağı eklenmiş.
                   </p>
                 ) : null}
-              </div>
+              </Panel>
 
-              <div className="rounded-2xl border border-white/8 bg-surface-1/70 p-5">
-                <h2 className="font-display text-sm font-bold">Kaynak bilgisi</h2>
-                <dl className="mt-3 space-y-2 text-xs">
+              <Panel title="Kaynak bilgisi">
+                <dl className="space-y-2 text-[12px]">
                   <div className="flex items-center justify-between gap-3">
                     <dt className="text-muted-foreground">Sunucu</dt>
-                    <dd className="truncate font-medium">
+                    <dd className="truncate font-medium text-foreground">
                       {hostLabel(activeSource.url)}
                     </dd>
                   </div>
                   <div className="flex items-center justify-between gap-3">
                     <dt className="text-muted-foreground">Biçim</dt>
-                    <dd className="font-medium">{KIND_LABELS[activeSource.kind]}</dd>
+                    <dd className="font-medium text-foreground">
+                      {KIND_LABELS[activeSource.kind]}
+                    </dd>
                   </div>
                   {activeSource.language ? (
                     <div className="flex items-center justify-between gap-3">
                       <dt className="text-muted-foreground">Sürüm</dt>
-                      <dd className="font-medium">{activeSource.language}</dd>
+                      <dd className="font-medium text-foreground">
+                        {activeSource.language}
+                      </dd>
                     </div>
                   ) : null}
                 </dl>
                 {activeSource.note ? (
-                  <p className="mt-3 flex items-start gap-2 border-t border-white/6 pt-3 text-[11px] leading-relaxed text-muted-foreground">
-                    <Info className="mt-0.5 size-3.5 shrink-0" />
+                  <p className="mt-3 border-t border-border pt-2.5 text-[10px] leading-relaxed text-muted-foreground">
                     {activeSource.note}
                   </p>
                 ) : null}
-              </div>
+              </Panel>
 
               {anime?.streams && anime.streams.length > 0 ? (
-                <div className="rounded-2xl border border-white/8 bg-surface-1/70 p-5">
-                  <h2 className="font-display text-sm font-bold">
-                    Lisanslı platformlar
-                  </h2>
-                  <ul className="mt-3 space-y-2">
+                <Panel title="Lisanslı platformlar">
+                  <ul className="space-y-1.5">
                     {anime.streams.slice(0, 6).map((stream) => (
                       <li key={stream.site}>
                         <a
                           href={stream.url}
                           target="_blank"
                           rel="noreferrer noopener"
-                          className="flex items-center gap-2.5 rounded-lg border border-white/8 px-3 py-2 text-xs transition-colors hover:border-brand/50"
+                          className="flex items-center gap-2.5 rounded-[3px] border border-border bg-background/40 px-2.5 py-2 text-[12px] transition-colors hover:border-primary/60"
                         >
                           <span className="min-w-0 flex-1 truncate font-medium">
                             {stream.site}
@@ -385,11 +337,10 @@ export default function Watch() {
                       </li>
                     ))}
                   </ul>
-                </div>
+                </Panel>
               ) : null}
 
-              <p className="flex items-start gap-2 rounded-2xl border border-white/8 bg-white/[0.02] p-4 text-[11px] leading-relaxed text-muted-foreground">
-                <ShieldAlert className="mt-0.5 size-3.5 shrink-0" />
+              <p className="rounded-[3px] border border-border bg-card/50 p-3 text-[10px] leading-relaxed text-muted-foreground">
                 Oynatıcıdaki akışlar site yöneticisi tarafından sağlanır. Anime
                 Prime içerik barındırmaz ve hiçbir siteden akış çekmez; telif
                 hakkına sahip olmadığın içeriği ekleme.
@@ -397,7 +348,7 @@ export default function Watch() {
             </aside>
           </div>
         )}
-      </div>
+      </Container>
     </SiteShell>
   );
 }

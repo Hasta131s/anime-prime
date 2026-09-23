@@ -114,13 +114,13 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     <div className="relative min-h-screen flex flex-col">
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(110%_70%_at_50%_-10%,oklch(0.55_0.2_258/0.22),transparent_60%)]"
+        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(110%_70%_at_50%_-10%,rgba(61,180,242,0.14),transparent_60%)]"
       />
 
       {/* Auth Content */}
       <div className="flex-1 flex items-center justify-center">
         <div className="flex items-center justify-center h-full flex-col px-4">
-        <Card className="w-full max-w-[380px] pb-0 border-white/8 bg-surface-1/80 shadow-2xl shadow-black/40 backdrop-blur-sm">
+        <Card className="w-full max-w-[380px] rounded-[3px] border-border bg-card pb-0">
           {step === "signIn" ? (
             <>
               <CardHeader className="text-center">
@@ -130,7 +130,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                       alt="Anime Prime"
                       width={56}
                       height={56}
-                      className="rounded-xl mb-4 mt-4 cursor-pointer"
+                      className="mb-4 mt-4 cursor-pointer rounded-[3px]"
                       onClick={() => navigate("/")}
                     />
                   </div>
@@ -178,7 +178,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                         <span className="w-full border-t" />
                       </div>
                       <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-surface-1 px-2 text-muted-foreground">
+                        <span className="bg-card px-2 text-muted-foreground">
                           veya
                         </span>
                       </div>
@@ -282,7 +282,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
             </>
           )}
 
-          <div className="py-4 px-6 text-xs text-center text-muted-foreground bg-white/[0.03] border-t border-white/8 rounded-b-lg">
+          <div className="rounded-b-[3px] border-t border-border bg-background/40 px-6 py-4 text-center text-[11px] text-muted-foreground">
             Oturumlar e-posta doğrulama koduyla açılır.
           </div>
         </Card>

@@ -1,14 +1,14 @@
-import { SiteShell } from "@/components/site/site-shell";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Panel } from "@/components/site/panel";
+import { Container, SiteShell } from "@/components/site/site-shell";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useDocumentTitle } from "@/hooks/use-document-title";
-import { cn } from "@/lib/utils";
-import { Compass, LogOut, MailCheck, ShieldCheck } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 
 /**
- * The signed-in destination. Browsing is public in this version, so the account
- * area stays a small, honest overview instead of a fake dashboard.
+ * The signed-in destination. Browsing is public, so this stays a small honest
+ * overview instead of a fake dashboard.
  */
 export default function Dashboard() {
   const { user, signOut } = useAuth();
@@ -22,25 +22,17 @@ export default function Dashboard() {
 
   return (
     <SiteShell>
-      <div className="mx-auto w-full max-w-4xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
-        <p className="font-display text-xs font-bold tracking-[0.2em] text-brand-bright uppercase">
+      <Container className="py-6">
+        <h1 className="text-[20px] font-semibold text-foreground sm:text-[24px]">
           Hesabım
-        </p>
-        <h1 className="mt-2 text-3xl font-extrabold sm:text-4xl">
-          Merhaba{user?.name ? `, ${user.name}` : ""}
         </h1>
-        <p className="mt-3 max-w-xl text-sm text-muted-foreground sm:text-base">
-          Hesabın hazır. Bu sürümde anime kataloğu herkese açık, bu yüzden
-          aşağıdaki alan yalnızca oturum bilgini gösterir.
+        <p className="mt-1 text-[12px] text-muted-foreground">
+          Merhaba{user?.name ? `, ${user.name}` : ""} — oturum bilgilerin aşağıda.
         </p>
 
-        <div className="mt-10 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-2xl border border-white/8 bg-surface-1/70 p-5">
-            <span className="flex size-9 items-center justify-center rounded-lg bg-brand/12 text-brand-bright">
-              <MailCheck className="size-4" aria-hidden="true" />
-            </span>
-            <h2 className="font-display mt-4 text-base font-bold">Oturum</h2>
-            <dl className="mt-3 space-y-2 text-sm">
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <Panel title="Oturum">
+            <dl className="space-y-2 text-[13px]">
               <div className="flex items-center justify-between gap-4">
                 <dt className="text-muted-foreground">E-posta</dt>
                 <dd className="truncate font-medium">
@@ -58,49 +50,38 @@ export default function Dashboard() {
                 </dd>
               </div>
             </dl>
-          </div>
-
-          <div className="rounded-2xl border border-white/8 bg-surface-1/70 p-5">
-            <span className="flex size-9 items-center justify-center rounded-lg bg-brand/12 text-brand-bright">
-              <Compass className="size-4" aria-hidden="true" />
-            </span>
-            <h2 className="font-display mt-4 text-base font-bold">Katalog</h2>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              Gerçek AniList verisiyle çalışan katalog; tür filtreleri, puan
-              sıralaması ve canlı arama ile birlikte.
+            <p className="mt-3 border-t border-border pt-3 text-[11px] leading-relaxed text-muted-foreground">
+              Oturumlar e-posta doğrulama koduyla açılır; kaydedilmiş kişisel veri
+              tutulmaz.
             </p>
-            <Link
-              to="/anime"
-              className={cn(
-                buttonVariants({ variant: "outline", size: "sm" }),
-                "mt-4 rounded-full",
-              )}
-            >
-              Kataloğu aç
-            </Link>
-          </div>
+          </Panel>
+
+          <Panel title="Katalog">
+            <p className="text-[13px] leading-relaxed text-muted-foreground">
+              Gerçek AniList verisiyle çalışan katalog: tür filtreleri, puan
+              sıralaması, canlı arama ve oynatılabilir kaynaklar.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Link
+                to="/anime"
+                className="inline-flex h-9 items-center rounded-[3px] border border-border bg-card px-4 text-[13px] font-medium transition-colors hover:bg-accent"
+              >
+                Kataloğu aç
+              </Link>
+            </div>
+          </Panel>
         </div>
 
-        <div className="mt-8 flex flex-col gap-4 rounded-2xl border border-white/8 bg-surface-1/40 p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/5 text-muted-foreground">
-              <ShieldCheck className="size-4" aria-hidden="true" />
-            </span>
-            <p className="text-sm text-muted-foreground">
-              Oturumun yalnızca e-posta doğrulama koduyla açılır. Kaydedilmiş
-              kişisel veri tutulmaz.
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            className="shrink-0 rounded-full"
-            onClick={handleSignOut}
-          >
+        <div className="mt-4 flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-[11px] text-muted-foreground">
+            İzleme ilerlemen bu cihazda saklanır; hesabına yazılmaz.
+          </p>
+          <Button variant="outline" onClick={handleSignOut}>
             <LogOut className="size-4" />
             Çıkış yap
           </Button>
         </div>
-      </div>
+      </Container>
     </SiteShell>
   );
 }

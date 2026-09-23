@@ -32,7 +32,7 @@ export function NextEpisodeLabel({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 text-xs font-medium text-brand-cyan",
+        "inline-flex items-center gap-1.5 text-xs font-medium text-brand-live",
         className,
       )}
     >

@@ -45,7 +45,7 @@ export function TrailerButton({
       </DialogTrigger>
       <DialogContent
         showCloseButton
-        className="border-white/10 bg-black p-0 sm:max-w-4xl"
+        className="rounded-[3px] border-border bg-black p-0 sm:max-w-4xl"
       >
         <DialogHeader className="sr-only">
           <DialogTitle>{title} fragmanı</DialogTitle>
@@ -53,7 +53,7 @@ export function TrailerButton({
             AniList üzerinden sağlanan resmî YouTube fragmanı.
           </DialogDescription>
         </DialogHeader>
-        <div className="aspect-video w-full overflow-hidden rounded-lg bg-black">
+        <div className="aspect-video w-full overflow-hidden rounded-[3px] bg-black">
           {open ? (
             <iframe
               src={`https://www.youtube-nocookie.com/embed/${trailerId}?autoplay=1&rel=0&modestbranding=1`}

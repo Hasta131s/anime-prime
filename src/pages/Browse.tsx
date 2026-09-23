@@ -1,5 +1,6 @@
-import { AnimeCard } from "@/components/site/anime-card";
-import { SiteShell } from "@/components/site/site-shell";
+import { AnimeGrid } from "@/components/site/anime-section";
+import { Tag } from "@/components/site/panel";
+import { Container, SiteShell } from "@/components/site/site-shell";
 import { CardGridSkeleton, EmptyCard } from "@/components/site/states";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,7 +15,6 @@ import type { AnimeCardView } from "@/convex/animeView";
 import { useRemoteSearch } from "@/hooks/use-anime";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { formatCount, genreLabel } from "@/lib/anime-labels";
-import { cn } from "@/lib/utils";
 import { useQuery } from "convex/react";
 import { Loader2, Search, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -39,12 +39,12 @@ export default function Browse() {
 
   const [term, setTerm] = useState(q);
   const [visible, setVisible] = useState(PAGE_SIZE);
-  // Tracks what the URL already holds so external navigation (header search)
+  // Tracks what the URL already holds so external navigation (top bar search)
   // and in-page typing never fight each other.
   const pushedRef = useRef(q);
 
   useDocumentTitle(
-    q ? `"${q}" arama sonuçları` : genre ? `${genreLabel(genre)} animeleri` : "Katalog",
+    q ? `"${q}" arama sonuçları` : genre ? `${genreLabel(genre)} animeleri` : "Anime",
   );
 
   useEffect(() => {
@@ -112,32 +112,29 @@ export default function Browse() {
   const isLoading = catalog === undefined;
   const shown = items.slice(0, visible);
   const hasMore = items.length > shown.length;
+  const resultCount = searching ? items.length : (catalog?.matching ?? items.length);
 
   return (
     <SiteShell>
-      <div className="mx-auto w-full max-w-7xl px-4 pt-10 sm:px-6 lg:px-8">
-        {/* ------------------------------------------------------- Page header */}
-        <div className="border-b border-white/6 pb-8">
-          <p className="font-display text-xs font-bold tracking-[0.2em] text-brand-bright uppercase">
-            Katalog
-          </p>
-          <h1 className="mt-2 text-3xl font-extrabold sm:text-4xl">
+      <Container className="py-6">
+        <header className="border-b border-border pb-4">
+          <h1 className="text-[20px] font-semibold text-foreground sm:text-[24px]">
             {searching
               ? `"${q.trim()}" için sonuçlar`
               : genre
                 ? `${genreLabel(genre)} animeleri`
-                : "Tüm animeler"}
+                : "Anime"}
           </h1>
-          <p className="mt-3 max-w-2xl text-sm text-muted-foreground sm:text-base">
-            {searching
-              ? "Önce AniList kataloğunda canlı arama yapılır, ardından yerel önbellekteki eşleşmeler eklenir."
-              : "AniList kataloğundan çekilen gerçek veriler: puanlar, türler, stüdyolar ve bölüm sayıları."}
+          <p className="mt-1 text-[12px] text-muted-foreground">
+            {isLoading
+              ? "Katalog hazırlanıyor…"
+              : `${formatCount(resultCount)} sonuç · ${formatCount(catalog?.total ?? 0)} yapımlık AniList önbelleği`}
           </p>
 
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
             <div className="relative flex-1">
               <Search
-                className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground"
+                className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
                 aria-hidden="true"
               />
               <input
@@ -146,86 +143,63 @@ export default function Browse() {
                 onChange={(event) => setTerm(event.target.value)}
                 placeholder="Anime, tür veya stüdyo ara — örn. Attack on Titan, MAPPA"
                 aria-label="Katalogda ara"
-                className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.04] pr-10 pl-10 text-sm text-foreground outline-none placeholder:text-muted-foreground/80 focus:border-brand/60 focus:bg-white/[0.06] focus:ring-2 focus:ring-ring/40"
+                className="h-9 w-full rounded-[3px] border border-input bg-card pr-9 pl-9 text-[13px] text-foreground outline-none placeholder:text-muted-foreground/80 focus:border-primary"
               />
               {term ? (
                 <button
                   type="button"
                   onClick={() => setTerm("")}
                   aria-label="Aramayı temizle"
-                  className="absolute top-1/2 right-3 flex size-6 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
+                  className="absolute top-1/2 right-2 flex size-6 -translate-y-1/2 items-center justify-center rounded-[2px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                 >
                   <X className="size-3.5" />
                 </button>
               ) : null}
             </div>
 
-            <div className="flex items-center gap-3">
-              <Select value={sort} onValueChange={(value) => updateParam("sort", value)}>
-                <SelectTrigger
-                  aria-label="Sıralama"
-                  className="h-12 w-[168px] rounded-xl border-white/10 bg-white/[0.04] px-3.5 text-sm"
-                >
-                  <SelectValue placeholder="Sırala" />
-                </SelectTrigger>
-                <SelectContent>
-                  {SORT_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {catalog ? (
-                <span className="hidden shrink-0 text-xs text-muted-foreground sm:block">
-                  {formatCount(catalog.total)} yapım
-                </span>
-              ) : null}
-            </div>
+            <Select value={sort} onValueChange={(value) => updateParam("sort", value)}>
+              <SelectTrigger
+                aria-label="Sıralama"
+                className="h-9 w-full rounded-[3px] border-input bg-card text-[13px] sm:w-[150px]"
+              >
+                <SelectValue placeholder="Sırala" />
+              </SelectTrigger>
+              <SelectContent>
+                {SORT_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          {/* ---------------------------------------------------- Genre filters */}
           {catalog && catalog.genres.length > 0 ? (
-            <div className="mt-5 flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => updateParam("genre", undefined)}
-                className={cn(
-                  "rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors sm:text-sm",
-                  genre
-                    ? "border-white/10 bg-white/[0.04] text-muted-foreground hover:text-foreground"
-                    : "border-brand/60 bg-brand/18 text-foreground",
-                )}
-              >
-                Tüm türler
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              <button type="button" onClick={() => updateParam("genre", undefined)}>
+                <Tag active={!genre}>Tüm türler</Tag>
               </button>
-              {catalog.genres.slice(0, 14).map((entry) => (
+              {catalog.genres.slice(0, 16).map((entry) => (
                 <button
                   key={entry.name}
                   type="button"
                   onClick={() => updateParam("genre", entry.name)}
-                  className={cn(
-                    "rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors sm:text-sm",
-                    genre === entry.name
-                      ? "border-brand/60 bg-brand/18 text-foreground"
-                      : "border-white/10 bg-white/[0.04] text-muted-foreground hover:text-foreground",
-                  )}
                 >
-                  {genreLabel(entry.name)}
+                  <Tag active={genre === entry.name} count={entry.count}>
+                    {genreLabel(entry.name)}
+                  </Tag>
                 </button>
               ))}
             </div>
           ) : null}
-        </div>
+        </header>
 
-        {/* ------------------------------------------------------------ Results */}
-        <div className="py-8">
+        <div className="py-6">
           {isLoading ? (
-            <CardGridSkeleton count={15} />
+            <CardGridSkeleton count={18} />
           ) : shown.length === 0 ? (
             remote.isSearching ? (
-              <div className="flex items-center justify-center gap-2 py-20 text-sm text-muted-foreground">
+              <div className="flex items-center justify-center gap-2 py-20 text-[13px] text-muted-foreground">
                 <Loader2 className="size-4 animate-spin" />
                 AniList kataloğunda aranıyor…
               </div>
@@ -252,34 +226,27 @@ export default function Browse() {
             )
           ) : (
             <>
-              <div className="mb-5 flex items-center justify-between gap-3">
-                <p className="text-sm text-muted-foreground">
-                  {formatCount(searching ? items.length : catalog?.matching ?? items.length)}{" "}
-                  sonuç
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <p className="text-[12px] text-muted-foreground">
+                  {formatCount(resultCount)} sonuç
                   {searching && remote.isSearching ? (
-                    <span className="ml-2 inline-flex items-center gap-1.5 text-xs text-brand-bright">
+                    <span className="ml-2 inline-flex items-center gap-1.5 text-brand-live">
                       <Loader2 className="size-3 animate-spin" />
-                      canlı arama sürüyor
+                      canlı arama
                     </span>
                   ) : null}
                 </p>
-                <p className="hidden text-xs text-muted-foreground sm:block">
+                <p className="hidden text-[11px] text-muted-foreground sm:block">
                   Kaynak: AniList API
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-4 lg:grid-cols-4 xl:grid-cols-5">
-                {shown.map((anime, index) => (
-                  <AnimeCard key={anime.anilistId} anime={anime} priority={index < 5} />
-                ))}
-              </div>
+              <AnimeGrid items={shown} priorityCount={6} />
 
               {hasMore ? (
-                <div className="mt-10 flex justify-center">
+                <div className="mt-8 flex justify-center">
                   <Button
                     variant="outline"
-                    size="lg"
-                    className="rounded-full border-white/12 px-6"
                     onClick={() => setVisible((value) => value + PAGE_SIZE)}
                   >
                     Daha fazla göster ({items.length - shown.length})
@@ -289,7 +256,7 @@ export default function Browse() {
             </>
           )}
         </div>
-      </div>
+      </Container>
     </SiteShell>
   );
 }

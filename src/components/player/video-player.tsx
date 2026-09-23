@@ -412,7 +412,7 @@ export function VideoPlayer({
     <div
       ref={wrapperRef}
       className={cn(
-        "group relative aspect-video w-full overflow-hidden rounded-2xl border border-white/8 bg-black outline-none",
+        "group relative aspect-video w-full overflow-hidden rounded-[3px] border border-border bg-black outline-none",
         className,
       )}
       onMouseEnter={() => {
@@ -475,7 +475,7 @@ export function VideoPlayer({
           <button
             type="button"
             onClick={() => setReloadToken((value) => value + 1)}
-            className="mt-1 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-white/20"
+            className="mt-1 inline-flex items-center gap-2 rounded-[3px] border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-white/20"
           >
             <RotateCcw className="size-3.5" />
             Yeniden dene
@@ -575,7 +575,7 @@ export function VideoPlayer({
                 value={activeQuality}
                 onChange={(event) => selectQuality(Number(event.target.value))}
                 aria-label="Kalite"
-                className="h-8 rounded-md border border-white/15 bg-black/50 px-2 text-[11px] font-medium text-white outline-none sm:text-xs"
+                className="h-8 rounded-[3px] border border-white/15 bg-black/50 px-2 text-[11px] font-medium text-white outline-none sm:text-xs"
               >
                 <option value={-1}>Otomatik</option>
                 {qualities.map((quality) => (
@@ -595,7 +595,7 @@ export function VideoPlayer({
                 setRate(value);
               }}
               aria-label="Oynatma hızı"
-              className="h-8 rounded-md border border-white/15 bg-black/50 px-2 text-[11px] font-medium text-white outline-none sm:text-xs"
+              className="h-8 rounded-[3px] border border-white/15 bg-black/50 px-2 text-[11px] font-medium text-white outline-none sm:text-xs"
             >
               {PLAYBACK_RATES.map((value) => (
                 <option key={value} value={value}>

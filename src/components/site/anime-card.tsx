@@ -5,15 +5,15 @@ import {
   formatLabel,
   formatScore,
   metaLine,
+  scoreColorClass,
 } from "@/lib/anime-labels";
 import { cn } from "@/lib/utils";
-import { Star } from "lucide-react";
 import { Link } from "react-router";
 import { Poster } from "./poster";
 
 /**
- * Poster card. Everything shown here — artwork, score, format, episode count —
- * comes straight from AniList.
+ * AniList-style grid card: sharp corners, hairline border, cover-first, white
+ * title that turns blue on hover, and real data underneath.
  */
 export function AnimeCard({
   anime,
@@ -40,46 +40,47 @@ export function AnimeCard({
       className={cn("group block outline-none", className)}
       aria-label={`${anime.title} detay sayfası`}
     >
-      <div className="relative overflow-hidden rounded-xl ring-1 ring-white/8 transition duration-300 group-hover:ring-2 group-hover:ring-brand/70 group-focus-visible:ring-2 group-focus-visible:ring-ring">
+      <div className="relative overflow-hidden rounded-[3px] border border-border bg-card transition-colors duration-150 group-hover:border-primary/70 group-focus-visible:border-primary">
         <Poster anime={anime} priority={priority} />
 
         {score ? (
-          <span className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-full bg-black/70 px-2 py-0.5 text-[11px] font-semibold text-white backdrop-blur-sm">
-            <Star className="size-3 text-amber-300" aria-hidden="true" />
+          <span
+            className={cn(
+              "absolute top-1 right-1 inline-flex items-center gap-1 rounded-[3px] bg-[#0b1622]/88 px-1.5 py-0.5 text-[11px] font-semibold backdrop-blur-[2px]",
+              scoreColorClass(anime.score),
+            )}
+          >
+            <span aria-hidden="true">★</span>
             {score}
           </span>
         ) : null}
 
         {anime.status === "RELEASING" ? (
-          <span className="absolute top-2 left-2 inline-flex items-center gap-1.5 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-white uppercase backdrop-blur-sm">
-            <span className="size-1.5 rounded-full bg-brand-cyan" aria-hidden="true" />
+          <span className="absolute bottom-1 left-1 inline-flex items-center gap-1 rounded-[3px] bg-[#0b1622]/88 px-1.5 py-0.5 text-[10px] font-medium text-brand-live backdrop-blur-[2px]">
+            <span className="size-1.5 rounded-full bg-brand-live" aria-hidden="true" />
             Yayında
           </span>
         ) : null}
 
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 bottom-0 flex h-24 items-end bg-linear-to-t from-black/90 via-black/45 to-transparent p-2.5 opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-visible:opacity-100"
+          className="pointer-events-none absolute inset-x-0 bottom-0 flex h-16 items-end bg-linear-to-t from-[#0b1622] via-[#0b1622]/60 to-transparent p-1.5 text-[10px] font-medium text-white/85 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100"
         >
-          <span className="text-[11px] leading-tight font-medium text-white/90">
-            {hoverMeta}
-          </span>
+          {hoverMeta}
         </div>
       </div>
 
-      <div className="mt-2.5 space-y-1">
-        <h3 className="font-display line-clamp-2 text-[13px] leading-snug font-bold text-foreground transition-colors duration-200 group-hover:text-brand-bright sm:text-sm">
-          {anime.title}
-        </h3>
-        {meta ? (
-          <p className="line-clamp-1 text-xs text-muted-foreground">{meta}</p>
-        ) : null}
-      </div>
+      <h3 className="mt-1.5 line-clamp-2 text-[13px] leading-snug font-medium text-foreground transition-colors duration-150 group-hover:text-primary">
+        {anime.title}
+      </h3>
+      {meta ? (
+        <p className="mt-0.5 line-clamp-1 text-[11px] text-muted-foreground">{meta}</p>
+      ) : null}
     </Link>
   );
 }
 
-/** Compact horizontal row used inside search suggestions. */
+/** Compact list row (AniList "list view" style). */
 export function AnimeRow({
   anime,
   onClick,
@@ -97,22 +98,27 @@ export function AnimeRow({
       to={`/anime/${anime.anilistId}`}
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-white/5",
+        "group flex items-center gap-3 rounded-[3px] px-2 py-2 transition-colors hover:bg-accent",
         className,
       )}
     >
       <div className="w-10 shrink-0">
-        <Poster anime={anime} className="rounded-md" />
+        <Poster anime={anime} className="rounded-[2px]" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="line-clamp-1 text-sm font-medium text-foreground">
+        <p className="line-clamp-1 text-[13px] font-medium text-foreground group-hover:text-primary">
           {anime.title}
         </p>
-        <p className="line-clamp-1 text-xs text-muted-foreground">{meta}</p>
+        <p className="line-clamp-1 text-[11px] text-muted-foreground">{meta}</p>
       </div>
       {score ? (
-        <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-200">
-          <Star className="size-3" aria-hidden="true" />
+        <span
+          className={cn(
+            "inline-flex shrink-0 items-center gap-1 text-[12px] font-semibold",
+            scoreColorClass(anime.score),
+          )}
+        >
+          <span aria-hidden="true">★</span>
           {score}
         </span>
       ) : null}

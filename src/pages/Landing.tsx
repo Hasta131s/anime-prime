@@ -1,35 +1,28 @@
-import { AnimeRail } from "@/components/site/anime-rail";
-import { AnimeRow } from "@/components/site/anime-card";
-import { Poster } from "@/components/site/poster";
+import { AnimeSection } from "@/components/site/anime-section";
 import { NextEpisodeLabel } from "@/components/site/next-episode";
-import { SiteShell } from "@/components/site/site-shell";
+import { Panel, StatStrip, Tag } from "@/components/site/panel";
+import { Poster } from "@/components/site/poster";
+import { Container, SiteShell } from "@/components/site/site-shell";
 import { TrailerButton } from "@/components/site/trailer-dialog";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { api } from "@/convex/_generated/api";
 import type { AnimeCardView } from "@/convex/animeView";
 import { useFeed } from "@/hooks/use-anime";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import {
   formatCount,
+  formatDuration,
   formatEpisodes,
   formatLabel,
   formatScore,
   genreLabel,
-  metaLine,
   releaseWindow,
+  scoreColorClass,
   statusLabel,
 } from "@/lib/anime-labels";
 import { cn } from "@/lib/utils";
 import { useQuery } from "convex/react";
-import { motion } from "framer-motion";
-import {
-  ArrowRight,
-  Clapperboard,
-  Compass,
-  Database,
-  MonitorSmartphone,
-  Play,
-  Star,
-} from "lucide-react";
+import { Database } from "lucide-react";
 import { useMemo } from "react";
 import { Link } from "react-router";
 
@@ -42,13 +35,6 @@ function pickFeatured(items: AnimeCardView[]): AnimeCardView | undefined {
   return pool[dayIndex % pool.length];
 }
 
-const reveal = {
-  initial: { opacity: 0, y: 18 },
-  whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true, margin: "-80px" },
-  transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] as const },
-};
-
 export default function Landing() {
   const trending = useFeed("trending");
   const airing = useFeed("airing");
@@ -58,22 +44,16 @@ export default function Landing() {
 
   const featured = useMemo(() => pickFeatured(trending.items), [trending.items]);
 
-  const spotlight = useMemo(() => {
-    const pool = airing.items.filter((item) => item.cover);
-    const lead = pool.find((item) => item.nextEpisodeAt) ?? pool[0];
-    const rest = pool
-      .filter((item) => item.anilistId !== lead?.anilistId)
-      .slice(0, 5);
-    return { lead, rest };
-  }, [airing.items]);
+  useDocumentTitle("Anime keşfet");
 
   const heroImage = featured ? (featured.banner ?? featured.cover) : undefined;
+  const score = formatScore(featured?.score);
 
   return (
     <SiteShell>
-      {/* ---------------------------------------------------------------- Hero */}
-      <section className="relative isolate overflow-hidden">
-        <div className="absolute inset-0 -z-10">
+      {/* -------------------------------------------------------- Header block */}
+      <section className="border-b border-border">
+        <div className="relative h-[160px] w-full sm:h-[220px] lg:h-[270px]">
           {heroImage ? (
             <img
               src={heroImage}
@@ -82,374 +62,242 @@ export default function Landing() {
               className="size-full object-cover object-center"
             />
           ) : (
-            <div className="size-full bg-grid opacity-30" />
+            <div className="size-full animate-pulse bg-card" />
           )}
-          {/* Scrims keep every word readable over real artwork. */}
-          <div className="absolute inset-0 bg-linear-to-r from-background via-background/92 to-background/30" />
-          <div className="absolute inset-0 bg-linear-to-t from-background via-background/60 to-background/10" />
+          <div className="absolute inset-0 bg-linear-to-t from-background via-background/75 to-background/25" />
         </div>
 
-        <div className="mx-auto flex min-h-[72vh] w-full max-w-7xl flex-col justify-end px-4 pt-28 pb-14 sm:px-6 sm:pt-36 sm:pb-16 lg:min-h-[80vh] lg:px-8">
+        <Container>
           {featured ? (
-            <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-              className="max-w-3xl"
-            >
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-black/40 px-3 py-1.5 text-[11px] font-semibold tracking-[0.14em] text-white/80 uppercase backdrop-blur-sm">
-                <span className="size-1.5 rounded-full bg-brand-cyan" aria-hidden="true" />
-                Öne çıkan
-                {featured.status ? ` · ${statusLabel(featured.status)}` : ""}
-              </span>
+            <div className="-mt-[96px] flex flex-col gap-4 pb-6 sm:-mt-[112px] sm:flex-row sm:gap-6 lg:-mt-[128px]">
+              <div className="w-[104px] shrink-0 sm:w-[150px] lg:w-[200px]">
+                <Poster
+                  anime={featured}
+                  priority
+                  className="border border-border shadow-lg shadow-black/30"
+                />
+              </div>
 
-              <h1 className="text-cinema mt-5 text-3xl leading-[1.05] font-extrabold text-white sm:text-5xl lg:text-6xl">
-                {featured.title}
-              </h1>
-
-              {featured.titleEnglish && featured.titleEnglish !== featured.title ? (
-                <p className="mt-3 text-sm text-white/60 sm:text-base">
-                  {featured.titleEnglish}
+              <div className="min-w-0 flex-1">
+                <p className="stat-label">
+                  Öne çıkan
+                  {featured.status ? ` · ${statusLabel(featured.status)}` : ""}
                 </p>
-              ) : null}
 
-              <div className="mt-5 flex flex-wrap items-center gap-2.5 text-xs font-medium text-white/85 sm:text-sm">
-                {formatScore(featured.score) ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-md bg-white/10 px-2.5 py-1 backdrop-blur-sm">
-                    <Star className="size-3.5 text-amber-300" aria-hidden="true" />
-                    {formatScore(featured.score)} / 10
-                  </span>
+                <h1 className="text-cinema mt-1.5 text-[24px] leading-tight font-bold text-foreground sm:text-[30px] lg:text-[34px]">
+                  {featured.title}
+                </h1>
+
+                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px]">
+                  {featured.titleEnglish &&
+                  featured.titleEnglish !== featured.title ? (
+                    <span className="text-primary">{featured.titleEnglish}</span>
+                  ) : null}
+                  {featured.titleNative ? (
+                    <span className="text-muted-foreground">
+                      {featured.titleNative}
+                    </span>
+                  ) : null}
+                </div>
+
+                <StatStrip
+                  className="mt-4"
+                  stats={[
+                    {
+                      label: "Puan",
+                      value: score,
+                      tone: scoreColorClass(featured.score),
+                    },
+                    { label: "Format", value: formatLabel(featured.format) },
+                    { label: "Bölüm", value: formatEpisodes(featured.episodes) },
+                    { label: "Süre", value: formatDuration(featured.duration) },
+                    { label: "Sezon", value: releaseWindow(featured) },
+                    {
+                      label: "Popülerlik",
+                      value: formatCount(featured.popularity),
+                    },
+                  ]}
+                />
+
+                {featured.genres.length > 0 ? (
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {featured.genres.slice(0, 5).map((genre) => (
+                      <Tag key={genre} to={`/anime?genre=${encodeURIComponent(genre)}`}>
+                        {genreLabel(genre)}
+                      </Tag>
+                    ))}
+                  </div>
                 ) : null}
-                {releaseWindow(featured) ? (
-                  <span className="rounded-md bg-white/10 px-2.5 py-1 backdrop-blur-sm">
-                    {releaseWindow(featured)}
-                  </span>
+
+                {featured.synopsis ? (
+                  <p className="mt-3 line-clamp-3 max-w-3xl text-[13px] leading-relaxed text-muted-foreground">
+                    {featured.synopsis}
+                  </p>
                 ) : null}
-                {formatLabel(featured.format) ? (
-                  <span className="rounded-md bg-white/10 px-2.5 py-1 backdrop-blur-sm">
-                    {formatLabel(featured.format)}
-                  </span>
-                ) : null}
-                {formatEpisodes(featured.episodes) ? (
-                  <span className="rounded-md bg-white/10 px-2.5 py-1 backdrop-blur-sm">
-                    {formatEpisodes(featured.episodes)}
-                  </span>
-                ) : null}
+
                 <NextEpisodeLabel
                   episode={featured.nextEpisode}
                   airingAt={featured.nextEpisodeAt}
-                  className="bg-black/30 px-2.5 py-1 text-white/90 backdrop-blur-sm"
+                  className="mt-3"
                 />
-              </div>
 
-              {featured.synopsis ? (
-                <p className="mt-5 max-w-2xl text-sm leading-relaxed text-white/75 sm:text-base">
-                  {featured.synopsis}
-                </p>
-              ) : null}
-
-              {featured.genres.length > 0 ? (
-                <div className="mt-5 flex flex-wrap gap-2">
-                  {featured.genres.slice(0, 4).map((genre) => (
-                    <Link
-                      key={genre}
-                      to={`/anime?genre=${encodeURIComponent(genre)}`}
-                      className="rounded-full border border-white/12 px-3 py-1 text-xs text-white/75 transition-colors hover:border-brand/60 hover:text-white"
-                    >
-                      {genreLabel(genre)}
-                    </Link>
-                  ))}
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <Link
+                    to={`/anime/${featured.anilistId}`}
+                    className={buttonVariants({ size: "lg" })}
+                  >
+                    Detayları gör
+                  </Link>
+                  <TrailerButton
+                    trailerId={featured.trailerId}
+                    trailerSite={featured.trailerSite}
+                    title={featured.title}
+                    variant="outline"
+                    size="lg"
+                    label="Fragman"
+                  />
+                  <Link
+                    to="/anime"
+                    className={cn(buttonVariants({ variant: "ghost", size: "lg" }))}
+                  >
+                    Kataloğu keşfet
+                  </Link>
                 </div>
-              ) : null}
-
-              <div className="mt-8 flex flex-wrap items-center gap-3">
-                <Link
-                  to={`/anime/${featured.anilistId}`}
-                  className={cn(
-                    buttonVariants({ size: "lg" }),
-                    "rounded-full px-6 text-sm font-semibold",
-                  )}
-                >
-                  Detayları gör
-                  <ArrowRight />
-                </Link>
-                <TrailerButton
-                  trailerId={featured.trailerId}
-                  trailerSite={featured.trailerSite}
-                  title={featured.title}
-                  className="rounded-full border-white/20 bg-white/5 px-6 text-sm text-white hover:bg-white/12 hover:text-white"
-                />
-                <Link
-                  to="/anime"
-                  className="text-sm font-medium text-white/75 underline-offset-4 transition-colors hover:text-white hover:underline"
-                >
-                  Kataloğun tamamı
-                </Link>
               </div>
-            </motion.div>
+            </div>
           ) : (
-            <HeroSkeleton />
+            <div className="-mt-[96px] flex gap-6 pb-6 sm:-mt-[112px]">
+              <div className="aspect-[2/3] w-[104px] shrink-0 animate-pulse rounded-[3px] bg-card sm:w-[150px]" />
+              <div className="flex-1 space-y-3 pt-10">
+                <div className="h-4 w-28 animate-pulse rounded-[2px] bg-card" />
+                <div className="h-8 w-2/3 animate-pulse rounded-[2px] bg-card" />
+                <div className="h-14 w-full max-w-md animate-pulse rounded-[3px] bg-card" />
+              </div>
+            </div>
           )}
-
-          {/* Live catalogue figures — counted from what is actually cached. */}
-          <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-white/10 pt-5 text-xs text-white/60 sm:text-sm">
-            <span className="inline-flex items-center gap-2 font-semibold text-white/80">
-              <Database className="size-3.5 text-brand-bright" aria-hidden="true" />
-              AniList canlı kataloğu
-            </span>
-            {stats && stats.titles > 0 ? (
-              <>
-                <span>{formatCount(stats.titles)} yapım</span>
-                <span>{stats.genres} tür</span>
-                <span>{stats.studios} stüdyo</span>
-                <span>Kadro, bölüm ve yayın bilgileri dahil</span>
-              </>
-            ) : (
-              <span>Katalog güncelleniyor…</span>
-            )}
-          </div>
-        </div>
+        </Container>
       </section>
 
-      <div className="mx-auto w-full max-w-7xl space-y-14 px-4 pt-14 sm:space-y-16 sm:px-6 lg:px-8">
-        <motion.div {...reveal}>
-          <AnimeRail
-            title="Şu an trend"
-            blurb="AniList trend sıralaması, her 6 saatte bir yenilenir."
-            items={trending.items}
-            status={trending.status}
-            message={trending.message}
-            onRetry={() => void trending.retry()}
-            href="/anime"
-          />
-        </motion.div>
+      {/* ------------------------------------------------------------ Sections */}
+      <Container className="space-y-9 py-8">
+        <AnimeSection
+          title="Şu an trend"
+          blurb="AniList trend sıralaması, 6 saatte bir yenilenir."
+          items={trending.items}
+          status={trending.status}
+          message={trending.message}
+          onRetry={() => void trending.retry()}
+          href="/anime"
+        />
 
-        {/* --------------------------------------------------------- Spotlight */}
-        {(spotlight.lead ?? spotlight.rest.length > 0) && (
-          <motion.section
-            {...reveal}
-            className="grid gap-6 rounded-3xl border border-white/8 bg-surface-1/70 p-4 sm:p-6 lg:grid-cols-[220px_1fr] lg:gap-8"
-          >
-            {spotlight.lead ? (
-              <div>
-                <Link
-                  to={`/anime/${spotlight.lead.anilistId}`}
-                  className="group block"
-                >
-                  <Poster anime={spotlight.lead} />
-                  <div className="mt-3 space-y-1">
-                    <h3 className="font-display line-clamp-2 text-sm font-bold transition-colors group-hover:text-brand-bright">
-                      {spotlight.lead.title}
-                    </h3>
-                    <NextEpisodeLabel
-                      episode={spotlight.lead.nextEpisode}
-                      airingAt={spotlight.lead.nextEpisodeAt}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      {metaLine(spotlight.lead)}
-                    </p>
-                  </div>
-                </Link>
-              </div>
-            ) : null}
+        <AnimeSection
+          title="Bu sezon yayında"
+          blurb="Yeni bölümleriyle devam eden yapımlar."
+          items={airing.items}
+          status={airing.status}
+          message={airing.message}
+          onRetry={() => void airing.retry()}
+          href="/anime?sort=newest"
+        />
 
-            <div className="flex flex-col">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="font-display text-lg font-extrabold sm:text-xl">
-                    Bu sezon yayında
-                  </h2>
-                  <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
-                    Yeni bölümü olan yapımlar ve gerçek yayın takvimi.
-                  </p>
-                </div>
-                <Link
-                  to="/anime?sort=newest"
-                  className="hidden shrink-0 text-xs font-semibold text-brand-bright hover:underline sm:block sm:text-sm"
-                >
-                  Tümünü gör
-                </Link>
-              </div>
+        <AnimeSection
+          title="Tüm zamanların en popüleri"
+          blurb="İzleyicilerin en çok takip ettiği animeler."
+          items={popular.items}
+          status={popular.status}
+          message={popular.message}
+          onRetry={() => void popular.retry()}
+          href="/anime"
+        />
 
-              <div className="mt-4 divide-y divide-white/6 border-y border-white/6">
-                {spotlight.rest.length > 0 ? (
-                  spotlight.rest.map((anime) => (
-                    <div
-                      key={anime.anilistId}
-                      className="flex items-center gap-3 py-2.5"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <AnimeRow anime={anime} className="px-0 hover:bg-transparent" />
-                      </div>
-                      <NextEpisodeLabel
-                        episode={anime.nextEpisode}
-                        airingAt={anime.nextEpisodeAt}
-                        className="hidden shrink-0 sm:inline-flex"
-                      />
-                    </div>
-                  ))
-                ) : (
-                  <p className="py-6 text-sm text-muted-foreground">
-                    Yayın takvimi yükleniyor…
-                  </p>
-                )}
-              </div>
-            </div>
-          </motion.section>
-        )}
+        <AnimeSection
+          title="En yüksek puanlılar"
+          blurb="AniList ortalamasına göre zirve."
+          items={top.items}
+          status={top.status}
+          message={top.message}
+          onRetry={() => void top.retry()}
+          href="/anime?sort=score"
+        />
 
-        <motion.div {...reveal}>
-          <AnimeRail
-            title="Tüm zamanların en popüleri"
-            blurb="İzleyicilerin en çok takip ettiği yapımlar."
-            items={popular.items}
-            status={popular.status}
-            message={popular.message}
-            onRetry={() => void popular.retry()}
-            href="/anime"
-          />
-        </motion.div>
-
-        {/* -------------------------------------------------------- How it works */}
-        <motion.section {...reveal} className="grid gap-8 sm:grid-cols-3">
-          {[
-            {
-              icon: Compass,
-              step: "01",
-              title: "Gerçek katalog",
-              body: "Başlık, puan, tür, stüdyo, kadro ve bölüm bilgileri AniList API'sinden canlı gelir. Vitrin görseli uydurmayız; afiş yoksa yapımın adı gösterilir.",
-            },
-            {
-              icon: Clapperboard,
-              step: "02",
-              title: "Nerede izlenir",
-              body: "Her detay sayfası, yapımın lisanslı yayın platformlarını ve resmî fragmanını listeler. Anime Prime video barındırmaz.",
-            },
-            {
-              icon: MonitorSmartphone,
-              step: "03",
-              title: "Her ekranda akıcı",
-              body: "Telefon, tablet ve masaüstünde aynı düzen; dokunmatik kaydırma, çevrimdışı uygulama desteği ve hızlı arama.",
-            },
-          ].map((item) => (
-            <div key={item.step} className="space-y-3 border-t border-white/10 pt-5">
-              <div className="flex items-center justify-between">
-                <span className="font-display text-xs font-bold tracking-[0.2em] text-muted-foreground">
-                  {item.step}
-                </span>
-                <item.icon className="size-4 text-brand-bright" aria-hidden="true" />
-              </div>
-              <h3 className="font-display text-base font-bold">{item.title}</h3>
-              <p className="text-sm leading-relaxed text-muted-foreground">
-                {item.body}
-              </p>
-            </div>
-          ))}
-        </motion.section>
-
-        <motion.div {...reveal}>
-          <AnimeRail
-            title="En yüksek puanlılar"
-            blurb="AniList kullanıcı ortalamasına göre zirve."
-            items={top.items}
-            status={top.status}
-            message={top.message}
-            onRetry={() => void top.retry()}
-            href="/anime?sort=score"
-          />
-        </motion.div>
-
-        {/* ------------------------------------------------------ Genre browser */}
         {stats && stats.topGenres.length > 0 ? (
-          <motion.section
-            {...reveal}
-            className="space-y-5 rounded-3xl border border-white/8 bg-grid p-6 sm:p-8"
+          <Panel
+            title="Türlere göre keşfet"
+            action={
+              <Link to="/anime" className="text-[12px] font-medium text-primary hover:underline">
+                Tümünü gör
+              </Link>
+            }
           >
-            <div className="flex items-end justify-between gap-4">
-              <div>
-                <h2 className="font-display text-lg font-extrabold sm:text-xl">
-                  Türlere göre keşfet
-                </h2>
-                <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
-                  Katalogdaki dağılıma göre, {stats.genres} tür.
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               {stats.topGenres.map((genre) => (
-                <Link
+                <Tag
                   key={genre.name}
                   to={`/anime?genre=${encodeURIComponent(genre.name)}`}
-                  className="group inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-2 text-sm transition-colors hover:border-brand/60 hover:bg-brand/12"
+                  count={genre.count}
                 >
-                  <span className="font-medium">{genreLabel(genre.name)}</span>
-                  <span className="text-xs text-muted-foreground group-hover:text-brand-bright">
-                    {genre.count}
-                  </span>
-                </Link>
+                  {genreLabel(genre.name)}
+                </Tag>
               ))}
             </div>
-          </motion.section>
+            <p className="mt-3 flex items-center gap-2 border-t border-border pt-3 text-[11px] text-muted-foreground">
+              <Database className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
+              {stats.titles > 0
+                ? `${formatCount(stats.titles)} yapım · ${stats.genres} tür · ${stats.studios} stüdyo, doğrudan AniList kataloğundan sayılır.`
+                : "Katalog güncelleniyor…"}
+            </p>
+          </Panel>
         ) : null}
 
-        {/* ----------------------------------------------------------------- CTA */}
-        <motion.section
-          {...reveal}
-          className="relative overflow-hidden rounded-3xl border border-white/10 bg-surface-1 px-6 py-10 sm:px-10 sm:py-12"
-        >
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 bg-[radial-gradient(90%_120%_at_100%_0%,oklch(0.55_0.2_258/0.28),transparent_60%)]"
-          />
-          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="max-w-xl">
-              <h2 className="font-display text-2xl font-extrabold sm:text-3xl">
-                <span className="inline-flex items-center gap-2">
-                  <Play className="size-5 fill-brand-bright text-brand-bright" aria-hidden="true" />
-                  Kataloğun tamamı seni bekliyor
-                </span>
-              </h2>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground sm:text-base">
-                Tür, puan ve çıkış yılına göre filtrele, aradığın yapımı bul,
-                kadrosunu ve nerede izleyebileceğini tek sayfada gör.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <Link
-                to="/anime"
-                className={cn(buttonVariants({ size: "lg" }), "rounded-full px-6")}
-              >
-                Kataloğu aç
-                <ArrowRight />
-              </Link>
-              <Link
-                to="/auth"
-                className={cn(
-                  buttonVariants({ variant: "outline", size: "lg" }),
-                  "rounded-full border-white/15 px-6",
-                )}
-              >
-                Hesap oluştur
-              </Link>
-            </div>
+        <Panel title="Bu katalog nasıl çalışır">
+          <div className="grid gap-6 sm:grid-cols-3">
+            {[
+              {
+                label: "Gerçek veri",
+                body: "Başlık, puan, tür, stüdyo, kadro ve bölüm bilgileri AniList API'sinden canlı çekilir. Afiş yoksa yapımın adı gösterilir; uydurma görsel kullanılmaz.",
+              },
+              {
+                label: "Nerede izlenir",
+                body: "Her yapımın lisanslı yayın platformları ve resmî fragmanı listelenir. Anime Prime video barındırmaz ve hiçbir siteden akış çekmez.",
+              },
+              {
+                label: "Her ekranda",
+                body: "Telefon, tablet ve masaüstünde aynı düzen; dokunmatik kaydırma, çevrimdışı uygulama desteği ve saniyelik arama.",
+              },
+            ].map((item) => (
+              <div key={item.label}>
+                <p className="stat-label">{item.label}</p>
+                <p className="mt-1.5 text-[12px] leading-relaxed text-muted-foreground">
+                  {item.body}
+                </p>
+              </div>
+            ))}
           </div>
-        </motion.section>
-      </div>
-    </SiteShell>
-  );
-}
+        </Panel>
 
-function HeroSkeleton() {
-  return (
-    <div className="max-w-2xl animate-pulse space-y-5">
-      <div className="h-6 w-40 rounded-full bg-white/8" />
-      <div className="h-12 w-3/4 rounded-lg bg-white/8" />
-      <div className="h-4 w-2/3 rounded-md bg-white/6" />
-      <div className="h-20 w-full rounded-lg bg-white/5" />
-      <div className="flex gap-3">
-        <div className="h-11 w-40 rounded-full bg-white/8" />
-        <div className="h-11 w-36 rounded-full bg-white/6" />
-      </div>
-    </div>
+        <Panel bodyClassName="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="max-w-xl">
+            <h2 className="text-[17px] font-semibold text-foreground">
+              Kataloğun tamamı seni bekliyor
+            </h2>
+            <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
+              Tür, puan ve çıkış yılına göre filtrele; kadroyu, bölümleri ve
+              nerede izleyebileceğini tek sayfada gör.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link to="/anime" className={buttonVariants()}>
+              Kataloğu aç
+            </Link>
+            <Link
+              to="/auth"
+              className={buttonVariants({ variant: "outline" })}
+            >
+              Hesap oluştur
+            </Link>
+          </div>
+        </Panel>
+      </Container>
+    </SiteShell>
   );
 }

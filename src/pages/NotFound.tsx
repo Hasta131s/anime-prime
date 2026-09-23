@@ -1,8 +1,7 @@
 import { BrandMark } from "@/components/site/brand";
-import { SiteShell } from "@/components/site/site-shell";
+import { Container, SiteShell } from "@/components/site/site-shell";
 import { buttonVariants } from "@/components/ui/button";
 import { useDocumentTitle } from "@/hooks/use-document-title";
-import { cn } from "@/lib/utils";
 import { Link } from "react-router";
 
 export default function NotFound() {
@@ -10,28 +9,25 @@ export default function NotFound() {
 
   return (
     <SiteShell>
-      <div className="mx-auto flex w-full max-w-xl flex-col items-center gap-5 px-4 py-24 text-center sm:py-32">
-        <BrandMark className="size-12" />
-        <p className="font-display text-6xl font-extrabold text-brand-bright">404</p>
-        <h1 className="text-2xl font-extrabold sm:text-3xl">
+      <Container className="flex flex-col items-center gap-3 py-24 text-center">
+        <BrandMark className="size-10 opacity-80" />
+        <p className="text-[40px] leading-none font-bold text-primary">404</p>
+        <h1 className="text-[18px] font-semibold text-foreground">
           Bu sayfa kataloğumuzda yok
         </h1>
-        <p className="max-w-sm text-sm text-muted-foreground sm:text-base">
-          Aradığın adres taşınmış ya da hiç var olmamış olabilir. Katalogdan
-          devam edebilirsin.
+        <p className="max-w-sm text-[13px] leading-relaxed text-muted-foreground">
+          Aradığın adres taşınmış ya da hiç var olmamış olabilir. Katalogdan devam
+          edebilirsin.
         </p>
-        <div className="mt-2 flex flex-wrap justify-center gap-3">
-          <Link to="/anime" className={cn(buttonVariants(), "rounded-full px-6")}>
+        <div className="mt-2 flex flex-wrap justify-center gap-2">
+          <Link to="/anime" className={buttonVariants()}>
             Kataloğu aç
           </Link>
-          <Link
-            to="/"
-            className={cn(buttonVariants({ variant: "outline" }), "rounded-full px-6")}
-          >
+          <Link to="/" className={buttonVariants({ variant: "outline" })}>
             Ana sayfa
           </Link>
         </div>
-      </div>
+      </Container>
     </SiteShell>
   );
 }
