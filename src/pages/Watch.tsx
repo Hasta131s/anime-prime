@@ -20,9 +20,9 @@ import {
   latestProgressFor,
   saveProgress,
 } from "@/lib/watch-progress";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { ChevronRight, ExternalLink, MonitorPlay } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 
 export default function Watch() {
@@ -37,6 +37,9 @@ export default function Watch() {
     valid ? anilistId : 0,
   );
   const sources = useQuery(api.sources.list, valid ? { anilistId } : "skip");
+  const recordProgress = useMutation(api.progress.record);
+  /** Throttle: the player writes a position at most once every ten seconds. */
+  const lastSyncRef = useRef(0);
 
   useDocumentTitle(anime ? `${anime.title} izle` : "İzle");
 
@@ -79,12 +82,21 @@ export default function Watch() {
     episodeSources.find((source) => source.id === requestedSourceId) ??
     episodeSources[0];
 
+  // The account's own position for this episode, so a different device resumes
+  // where the last one stopped.
+  const serverEntry = useQuery(
+    api.progress.forEpisode,
+    valid ? { anilistId, episode: activeEpisode } : "skip",
+  );
+
   // Reads the saved position once per episode/source so the player can seek into
   // it on attach without the parent ever re-seeking mid-playback.
   const startAt = useMemo(() => {
     if (!valid || !activeSource) return 0;
-    return getProgress(anilistId, activeEpisode)?.position ?? 0;
-  }, [valid, anilistId, activeEpisode, activeSource, restartToken]);
+    const local = getProgress(anilistId, activeEpisode)?.position ?? 0;
+    if (local > 0) return local;
+    return serverEntry?.position ?? 0;
+  }, [valid, anilistId, activeEpisode, activeSource, restartToken, serverEntry]);
 
   const selectEpisode = (episode: number) => {
     const next = new URLSearchParams(searchParams);
@@ -202,11 +214,27 @@ export default function Watch() {
                 subtitle={`${hostLabel(activeSource.url)} · ${KIND_LABELS[activeSource.kind]}`}
                 poster={anime?.banner ?? anime?.cover}
                 startAt={startAt}
-                onProgress={(position, duration) =>
-                  saveProgress(anilistId, activeEpisode, position, duration)
-                }
+                onProgress={(position, duration) => {
+                  saveProgress(anilistId, activeEpisode, position, duration);
+                  const now = Date.now();
+                  if (now - lastSyncRef.current < 10_000) return;
+                  lastSyncRef.current = now;
+                  void recordProgress({
+                    anilistId,
+                    episode: activeEpisode,
+                    position: Math.round(position),
+                    duration: Math.round(duration),
+                  }).catch(() => undefined);
+                }}
                 onEnded={() => {
                   clearProgress(anilistId, activeEpisode);
+                  void recordProgress({
+                    anilistId,
+                    episode: activeEpisode,
+                    position: 0,
+                    duration: 0,
+                    completed: true,
+                  }).catch(() => undefined);
                   setFinishedEpisode(activeEpisode);
                 }}
               />

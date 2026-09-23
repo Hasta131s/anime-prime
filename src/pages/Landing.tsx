@@ -275,6 +275,37 @@ export default function Landing() {
           </div>
         </Panel>
 
+        <Panel title="Takvim, yorumlar ve profiller">
+          <div className="grid gap-5 sm:grid-cols-3">
+            {[
+              {
+                to: "/takvim",
+                label: "Yayın takvimi",
+                body: "Önümüzdeki yedi günün gerçek bölüm saatleri tek bakışta. Bölüm yayınlandığında sayfayı yenile, kaldığın yerden devam et.",
+              },
+              {
+                to: "/anime",
+                label: "Yorumlar ve spoiler",
+                body: "Her yapımın altında yorum yap, yanıtla, beğen. Spoiler içeren yorumlar sen dokunana kadar gizli kalır.",
+              },
+              {
+                to: "/auth",
+                label: "Kişisel profil",
+                body: "Favori animelerini seç, izlediğin bölümleri ve toplam anime sayını profilde topla.",
+              },
+            ].map((item) => (
+              <Link key={item.label} to={item.to} className="group block">
+                <p className="stat-label transition-colors group-hover:text-primary">
+                  {item.label}
+                </p>
+                <p className="mt-1.5 text-[12px] leading-relaxed text-muted-foreground">
+                  {item.body}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </Panel>
+
         <Panel bodyClassName="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="max-w-xl">
             <h2 className="text-[17px] font-semibold text-foreground">
@@ -288,6 +319,12 @@ export default function Landing() {
           <div className="flex flex-wrap gap-2">
             <Link to="/anime" className={buttonVariants()}>
               Kataloğu aç
+            </Link>
+            <Link
+              to="/takvim"
+              className={buttonVariants({ variant: "outline" })}
+            >
+              Yayın takvimi
             </Link>
             <Link
               to="/auth"

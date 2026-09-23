@@ -1,7 +1,7 @@
 import { buttonVariants } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
-import { Compass, Flame, Home, Search, Trophy, User } from "lucide-react";
+import { CalendarDays, Compass, Flame, Home, Search, Trophy, User } from "lucide-react";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { BrandMark, Wordmark } from "./brand";
@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { label: "Anime", to: "/anime", icon: Compass },
   { label: "Bu sezon", to: "/anime?sort=newest", icon: Flame },
   { label: "En iyiler", to: "/anime?sort=score", icon: Trophy },
+  { label: "Takvim", to: "/takvim", icon: CalendarDays },
 ];
 
 /** AniList keeps its content column at ~1000px. */
@@ -60,7 +61,8 @@ export function SiteShell({
 
 function SiteSidebar() {
   const isActive = useIsActive();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
+  const isAdmin = user?.role === "admin";
 
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-[200px] flex-col border-r border-border bg-card lg:flex">
@@ -88,13 +90,29 @@ function SiteSidebar() {
 
       <div className="border-t border-border p-3">
         {isLoading ? null : isAuthenticated ? (
-          <Link
-            to="/dashboard"
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "w-full")}
-          >
-            <User className="size-3.5" />
-            Hesabım
-          </Link>
+          <div className="space-y-1.5">
+            <Link
+              to="/dashboard"
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }), "w-full")}
+            >
+              <User className="size-3.5" />
+              Hesabım
+            </Link>
+            <Link
+              to="/profil"
+              className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full")}
+            >
+              Profilim
+            </Link>
+            {isAdmin ? (
+              <Link
+                to="/admin"
+                className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full")}
+              >
+                Yönetim paneli
+              </Link>
+            ) : null}
+          </div>
         ) : (
           <Link
             to="/auth"

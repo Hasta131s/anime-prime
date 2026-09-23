@@ -249,12 +249,19 @@ export const me = query({
   },
 });
 
-/** Any account's public profile. */
+/**
+ * Any account's public profile.
+ *
+ * The id arrives as a string from the URL, so it is normalised here — a
+ * malformed link returns an empty result instead of throwing in the client.
+ */
 export const detail = query({
-  args: { userId: v.id("users") },
+  args: { userId: v.string() },
   handler: async (ctx, args): Promise<ProfileResult> => {
     const viewer = await currentUser(ctx);
-    return await buildResult(ctx, args.userId, viewer?._id ?? null, isAdmin(viewer));
+    const userId = ctx.db.normalizeId("users", args.userId);
+    if (!userId) return EMPTY_RESULT;
+    return await buildResult(ctx, userId, viewer?._id ?? null, isAdmin(viewer));
   },
 });
 

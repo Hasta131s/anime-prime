@@ -14,6 +14,9 @@ const Landing = lazy(() => import("./pages/Landing.tsx"));
 const Browse = lazy(() => import("./pages/Browse.tsx"));
 const AnimeDetail = lazy(() => import("./pages/AnimeDetail.tsx"));
 const Watch = lazy(() => import("./pages/Watch.tsx"));
+const Calendar = lazy(() => import("./pages/Calendar.tsx"));
+const Profile = lazy(() => import("./pages/Profile.tsx"));
+const Admin = lazy(() => import("./pages/Admin.tsx"));
 const AuthPage = lazy(() => import("./pages/Auth.tsx"));
 const Dashboard = lazy(() => import("./pages/Dashboard.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
@@ -126,9 +129,33 @@ createRoot(document.getElementById("root")!).render(
               <Route path="/anime" element={<Browse />} />
               <Route path="/anime/:id" element={<AnimeDetail />} />
               <Route path="/anime/:id/izle" element={<Watch />} />
+              <Route path="/takvim" element={<Calendar />} />
+              <Route path="/profil/:userId" element={<Profile />} />
+              <Route
+                path="/profil"
+                element={
+                  <RequireAuth
+                    title="Profilin için giriş yap"
+                    description="Favorilerin, izleme geçmişin ve yorumların hesabına bağlı."
+                  >
+                    <Profile />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  <RequireAuth
+                    title="Yönetim paneli için giriş yap"
+                    description="Bu alan yalnızca yönetici hesaplara açıktır."
+                  >
+                    <Admin />
+                  </RequireAuth>
+                }
+              />
               <Route
                 path="/auth"
-                element={<AuthPage redirectAfterAuth="/anime" />}
+                element={<AuthPage redirectAfterAuth="/dashboard" />}
               />
               <Route
                 path="/dashboard"

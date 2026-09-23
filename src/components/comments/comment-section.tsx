@@ -159,13 +159,14 @@ function Composer({
   if (state === undefined) return null;
 
   if (!state.canComment) {
+    const bannedMessage = "message" in state ? state.message : undefined;
     const message =
       state.reason === "signin"
         ? "Yorum yazmak için giriş yapmalısın."
         : state.reason === "anonymous"
           ? "Yorum yazmak için e-posta ile giriş yapmalısın; misafir oturumları yorum yazamaz."
-          : state.message
-            ? `Hesabın askıya alındı: ${state.message}`
+          : bannedMessage
+            ? `Hesabın askıya alındı: ${bannedMessage}`
             : "Hesabın askıya alındığı için yorum yazamazsın.";
 
     return (
