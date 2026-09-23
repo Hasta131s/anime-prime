@@ -133,6 +133,30 @@ const schema = defineSchema(
     }).index("by_list", ["list"]),
 
     /**
+     * Playable sources (HLS `.m3u8` or progressive `.mp4`).
+     *
+     * These are supplied by the site owner — the app never scrapes or extracts
+     * streams, and writing here is restricted to admin accounts in
+     * `convex/sources.ts`. An anime with no rows simply shows the "Nerede
+     * izlenir" panel with licensed platform links instead of a player.
+     */
+    playbackSources: defineTable({
+      anilistId: v.number(),
+      /** 1-based episode number; 0 means a film / single-part title. */
+      episode: v.number(),
+      label: v.string(),
+      url: v.string(),
+      /** hls | mp4 | auto (probed by the player from the URL). */
+      kind: v.string(),
+      language: v.optional(v.string()),
+      note: v.optional(v.string()),
+      addedBy: v.optional(v.id("users")),
+      createdAt: v.number(),
+    })
+      .index("by_anilistId", ["anilistId"])
+      .index("by_anilistId_episode", ["anilistId", "episode"]),
+
+    /**
      * Per-key sync bookkeeping. Drives the loading/error states in the UI and
      * the retry backoff, so a failing upstream never turns into a busy loop.
      */

@@ -6,6 +6,7 @@ import { SiteShell } from "@/components/site/site-shell";
 import { ErrorCard } from "@/components/site/states";
 import { TrailerButton } from "@/components/site/trailer-dialog";
 import { buttonVariants } from "@/components/ui/button";
+import { api } from "@/convex/_generated/api";
 import type { AnimeDetailView, TitleRefView } from "@/convex/animeView";
 import { useAnimeDetail } from "@/hooks/use-anime";
 import { useDocumentTitle } from "@/hooks/use-document-title";
@@ -25,16 +26,20 @@ import {
   synopsisParagraphs,
 } from "@/lib/anime-labels";
 import { cn } from "@/lib/utils";
+import { formatClock, latestProgressFor } from "@/lib/watch-progress";
+import { useQuery } from "convex/react";
 import {
   ArrowLeft,
   CalendarClock,
   ExternalLink,
   Info,
+  Play,
+  RotateCcw,
   Star,
   Tv,
   Users,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { Link, useParams } from "react-router";
 
 export default function AnimeDetail() {
@@ -101,6 +106,17 @@ function DetailBody({
   message?: string;
   onRetry: () => void;
 }) {
+  // Owner-supplied playable sources (HLS / MP4) for this title.
+  const sources = useQuery(api.sources.list, { anilistId: anime.anilistId });
+  const hasSources = Boolean(sources && sources.length > 0);
+  const resume = useMemo(
+    () => (hasSources ? latestProgressFor(anime.anilistId) : null),
+    [hasSources, anime.anilistId],
+  );
+  const watchHref = resume
+    ? `/anime/${anime.anilistId}/izle?b=${resume.episode}`
+    : `/anime/${anime.anilistId}/izle`;
+
   const heroImage = anime.banner ?? anime.cover;
   const score = formatScore(anime.score);
   const paragraphs = synopsisParagraphs(anime.synopsis);
@@ -205,14 +221,30 @@ function DetailBody({
               />
 
               <div className="mt-6 flex flex-wrap items-center gap-3">
+                {hasSources ? (
+                  <Link
+                    to={watchHref}
+                    className={cn(
+                      buttonVariants({ size: "lg" }),
+                      "rounded-full px-6 text-sm font-semibold",
+                    )}
+                  >
+                    <Play className="fill-current" />
+                    İzle
+                  </Link>
+                ) : null}
                 <TrailerButton
                   trailerId={anime.trailerId}
                   trailerSite={anime.trailerSite}
                   title={anime.title}
-                  variant="default"
-                  className="rounded-full px-6 text-sm font-semibold"
+                  variant={hasSources ? "outline" : "default"}
+                  className={cn(
+                    "rounded-full px-6 text-sm font-semibold",
+                    hasSources &&
+                      "border-white/20 bg-white/5 text-white hover:bg-white/12 hover:text-white",
+                  )}
                 />
-                {streams[0] ? (
+                {!hasSources && streams[0] ? (
                   <a
                     href={streams[0].url}
                     target="_blank"
@@ -237,6 +269,16 @@ function DetailBody({
                   </a>
                 ) : null}
               </div>
+
+              {hasSources && resume ? (
+                <p className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-brand-cyan">
+                  <RotateCcw className="size-3.5" aria-hidden="true" />
+                  Kaldığın yer:{" "}
+                  {resume.episode === 0 ? "Tek parça" : `Bölüm ${resume.episode}`}
+                  {" · "}
+                  {formatClock(resume.position)}
+                </p>
+              ) : null}
             </div>
           </div>
         </div>
