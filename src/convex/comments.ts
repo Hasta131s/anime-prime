@@ -84,8 +84,12 @@ async function authorFor(
     isAnonymous: user?.isAnonymous ?? false,
     banned: Boolean(user?.bannedAt),
   };
-  // A chosen character is the member's face across the site.
-  if (profile?.characterImage) author.image = profile.characterImage;
+  // A gallery upload wins, then the chosen character, then the account avatar.
+  const uploadedAvatar = profile?.avatarStorageId
+    ? await ctx.storage.getUrl(profile.avatarStorageId)
+    : null;
+  if (uploadedAvatar) author.image = uploadedAvatar;
+  else if (profile?.characterImage) author.image = profile.characterImage;
   else if (user?.image) author.image = user.image;
   if (user?.role) author.role = user.role;
   const handle = handleFromEmail(user?.email);

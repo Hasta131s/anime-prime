@@ -244,6 +244,13 @@ const schema = defineSchema(
       favoriteGenre: v.optional(v.string()),
       /** AniList id whose banner is used as the profile header image. */
       bannerAnilistId: v.optional(v.number()),
+      /**
+       * Images the member uploaded from their own gallery, kept in Convex file
+       * storage. When present they win over the character portrait and the
+       * anime banner, so an upload always shows up immediately.
+       */
+      avatarStorageId: v.optional(v.id("_storage")),
+      bannerStorageId: v.optional(v.id("_storage")),
       /** Ordered favourites — the first one supplies the default banner. */
       favoriteAnimeIds: v.array(v.number()),
 

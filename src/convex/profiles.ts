@@ -78,12 +78,37 @@ function isCustomized(profile: Doc<"profiles"> | null) {
   );
 }
 
-function buildProfileView(
+/**
+ * Turns the stored upload ids into public URLs.
+ *
+ * Files live in Convex file storage, so the profile only ever keeps the id —
+ * the URL is resolved on every read and expires with the file itself.
+ */
+async function uploadedImages(
+  ctx: QueryCtx,
+  profile: Doc<"profiles"> | null,
+): Promise<{ avatarUrl?: string; bannerUrl?: string }> {
+  const result: { avatarUrl?: string; bannerUrl?: string } = {};
+
+  if (profile?.avatarStorageId) {
+    const url = await ctx.storage.getUrl(profile.avatarStorageId);
+    if (url) result.avatarUrl = url;
+  }
+  if (profile?.bannerStorageId) {
+    const url = await ctx.storage.getUrl(profile.bannerStorageId);
+    if (url) result.bannerUrl = url;
+  }
+
+  return result;
+}
+
+async function buildProfileView(
+  ctx: QueryCtx,
   user: Doc<"users">,
   profile: Doc<"profiles"> | null,
   viewerId: Id<"users"> | null,
   admin: boolean,
-): ProfileView {
+): Promise<ProfileView> {
   const displayName = resolveDisplayName(user, profile);
   const view: ProfileView = {
     userId: user._id,
@@ -120,6 +145,10 @@ function buildProfileView(
   if (profile?.location) view.location = profile.location;
   if (profile?.website) view.website = profile.website;
   if (profile?.favoriteGenre) view.favoriteGenre = profile.favoriteGenre;
+
+  const uploads = await uploadedImages(ctx, profile);
+  if (uploads.avatarUrl) view.avatarUrl = uploads.avatarUrl;
+  if (uploads.bannerUrl) view.bannerUrl = uploads.bannerUrl;
 
   const banner = profile?.bannerAnilistId ?? profile?.favoriteAnimeIds[0];
   if (banner) view.bannerAnilistId = banner;
@@ -175,7 +204,7 @@ async function buildResult(
   if (!user) return EMPTY_RESULT;
 
   const profile = await findProfileRow(ctx, userId);
-  const view = buildProfileView(user, profile, viewerId, admin);
+  const view = await buildProfileView(ctx, user, profile, viewerId, admin);
 
   const isOwner = viewerId === userId;
   if (!view.isPublic && !isOwner && !admin) {
@@ -241,8 +270,17 @@ export async function memberCardsFor(
       };
       const handle = handleFromEmail(user.email);
       if (handle) card.handle = handle;
-      if (user.image) card.image = user.image;
-      if (profile?.characterImage) card.characterImage = profile.characterImage;
+
+      // An uploaded photo beats both the account avatar and the character
+      // portrait, so the face a member picked is the one shown in lists.
+      const uploadedAvatar = profile?.avatarStorageId
+        ? await ctx.storage.getUrl(profile.avatarStorageId)
+        : null;
+      if (uploadedAvatar) card.image = uploadedAvatar;
+      else if (user.image) card.image = user.image;
+      if (!uploadedAvatar && profile?.characterImage) {
+        card.characterImage = profile.characterImage;
+      }
       if (user.role) card.role = user.role;
       if (profile?.tagline) card.tagline = profile.tagline;
       return card;
@@ -421,6 +459,60 @@ export const setBanner = mutation({
       bannerAnilistId: args.anilistId,
       updatedAt: Date.now(),
     });
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Gallery uploads
+// ---------------------------------------------------------------------------
+
+/**
+ * A short-lived URL the client posts an image to.
+ *
+ * The file goes straight to Convex file storage; only the resulting id ever
+ * passes through the profile mutation, so no public URL is trusted from the
+ * client.
+ */
+export const generateUploadUrl = mutation({
+  args: {},
+  handler: async (ctx): Promise<string> => {
+    await requireMember(ctx);
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+async function storeImage(
+  ctx: MutationCtx,
+  field: "avatarStorageId" | "bannerStorageId",
+  storageId: Id<"_storage"> | null,
+) {
+  const user = await requireMember(ctx);
+  const profile = await ensureProfile(ctx, user._id);
+  const previous = profile[field];
+
+  await ctx.db.patch(profile._id, {
+    [field]: storageId ?? undefined,
+    updatedAt: Date.now(),
+  });
+
+  if (previous && previous !== storageId) {
+    await ctx.storage.delete(previous);
+  }
+}
+
+/** Sets or clears the member's own profile photo (square framing in the UI). */
+export const setAvatar = mutation({
+  args: { storageId: v.union(v.id("_storage"), v.null()) },
+  handler: async (ctx, args) => {
+    await storeImage(ctx, "avatarStorageId", args.storageId);
+  },
+});
+
+/** Sets or clears the member's own banner image. */
+export const setCoverImage = mutation({
+  args: { storageId: v.union(v.id("_storage"), v.null()) },
+  handler: async (ctx, args) => {
+    await storeImage(ctx, "bannerStorageId", args.storageId);
   },
 });
 

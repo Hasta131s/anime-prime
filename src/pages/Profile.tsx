@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import {
   CHARACTER_SEARCH_MIN,
   MAX_BIO,
@@ -44,6 +45,7 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import {
   CalendarDays,
   Clock,
+  ImagePlus,
   Loader2,
   Lock,
   MapPin,
@@ -262,7 +264,8 @@ function ProfileHeader({
   banner?: ProfileResult["favorites"][number];
   stats: ProfileResult["stats"];
 }) {
-  const hero = banner?.banner ?? banner?.cover;
+  // A gallery upload wins over the auto banner taken from a favourite anime.
+  const hero = profile.bannerUrl ?? banner?.banner ?? banner?.cover;
 
   return (
     <section className="border-b border-border">
@@ -327,22 +330,31 @@ function ProfileHeader({
 }
 
 /**
- * Square identity block. Character art is natively 3:4, so it is cropped from
- * the top into a square frame — the face stays visible and the avatar reads as
- * a profile picture instead of a tall strip.
+ * Square identity block.
+ *
+ * The frame is an `aspect-square` box with an absolutely positioned image
+ * inside, so the avatar is always exactly as tall as it is wide — an uploaded
+ * 3:4 photo or the character art is cropped into that square instead of
+ * stretching it into a rectangle.
  */
 function ProfilePortrait({ profile }: { profile: ProfileView }) {
-  const portrait = profile.characterImage ?? profile.image;
+  const uploaded = profile.avatarUrl;
+  const portrait = uploaded ?? profile.characterImage ?? profile.image;
   const frame =
-    "size-[118px] shrink-0 overflow-hidden rounded-[3px] border-2 border-background shadow-xl shadow-black/40 sm:size-[152px]";
+    "relative block aspect-square w-[120px] shrink-0 overflow-hidden rounded-[3px] border-2 border-background bg-secondary shadow-xl shadow-black/40 sm:w-[156px]";
 
   if (portrait) {
     return (
-      <img
-        src={portrait}
-        alt={profile.characterName ?? ""}
-        className={cn(frame, "object-cover object-top")}
-      />
+      <span className={frame}>
+        <img
+          src={portrait}
+          alt={profile.characterName ?? profile.displayName}
+          className={cn(
+            "absolute inset-0 size-full object-cover",
+            uploaded ? "object-center" : "object-top",
+          )}
+        />
+      </span>
     );
   }
 
@@ -351,7 +363,7 @@ function ProfilePortrait({ profile }: { profile: ProfileView }) {
       aria-hidden="true"
       className={cn(
         frame,
-        "flex items-center justify-center bg-secondary text-[34px] font-bold text-muted-foreground sm:text-[44px]",
+        "flex items-center justify-center text-[34px] font-bold text-muted-foreground sm:text-[44px]",
       )}
     >
       {initialsFor(profile.displayName)}
@@ -452,6 +464,7 @@ function ProfileEditor({ profile }: { profile: ProfileView }) {
   const update = useMutation(api.profiles.update);
   const toggleFavorite = useMutation(api.profiles.toggleFavorite);
   const setBanner = useMutation(api.profiles.setBanner);
+  const setCoverImage = useMutation(api.profiles.setCoverImage);
 
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -599,6 +612,8 @@ function ProfileEditor({ profile }: { profile: ProfileView }) {
 
           <CharacterPicker />
 
+          <ProfileImages profile={profile} />
+
           {/* -------------------------------------------------- favorites */}
           <div className="border-t border-border pt-4">
             <p className="stat-label">
@@ -624,7 +639,18 @@ function ProfileEditor({ profile }: { profile: ProfileView }) {
                       type="button"
                       aria-label="Banner yap"
                       title="Banner yap"
-                      onClick={() => void setBanner({ anilistId: card.anilistId })}
+                      onClick={() => {
+                        // A favourite banner replaces any uploaded banner image.
+                        void setCoverImage({ storageId: null })
+                          .then(() => setBanner({ anilistId: card.anilistId }))
+                          .catch((cause) =>
+                            toast.error(
+                              cause instanceof Error
+                                ? cause.message
+                                : "Banner ayarlanamadı.",
+                            ),
+                          );
+                      }}
                       className="text-[10px] text-muted-foreground transition-colors hover:text-primary"
                     >
                       banner
@@ -720,6 +746,186 @@ function ProfileEditor({ profile }: { profile: ProfileView }) {
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Gallery images
+// ---------------------------------------------------------------------------
+
+/** Uploads a picked file to Convex file storage and returns its storage id. */
+async function uploadImage(
+  uploadUrl: string,
+  file: File,
+): Promise<Id<"_storage">> {
+  const response = await fetch(uploadUrl, {
+    method: "POST",
+    headers: { "Content-Type": file.type },
+    body: file,
+  });
+  if (!response.ok) throw new Error("Görsel yüklenemedi, tekrar dene.");
+  const { storageId } = (await response.json()) as { storageId: string };
+  return storageId as Id<"_storage">;
+}
+
+/**
+ * Profile photo + banner uploads straight from the device gallery.
+ * Images live in Convex file storage; the profile only keeps the id, and an
+ * upload always wins over the character portrait and the anime banner.
+ */
+function ProfileImages({ profile }: { profile: ProfileView }) {
+  const generateUploadUrl = useMutation(api.profiles.generateUploadUrl);
+  const setAvatar = useMutation(api.profiles.setAvatar);
+  const setCoverImage = useMutation(api.profiles.setCoverImage);
+
+  const [busy, setBusy] = useState<"avatar" | "banner" | null>(null);
+
+  const pick = async (file: File, target: "avatar" | "banner") => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Yalnızca görsel dosyası yükleyebilirsin.");
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("Görsel en fazla 8 MB olabilir.");
+      return;
+    }
+
+    setBusy(target);
+    try {
+      const uploadUrl = await generateUploadUrl();
+      const storageId = await uploadImage(uploadUrl, file);
+      if (target === "avatar") {
+        await setAvatar({ storageId });
+        toast.success("Profil fotoğrafın güncellendi.");
+      } else {
+        await setCoverImage({ storageId });
+        toast.success("Bannerın güncellendi.");
+      }
+    } catch (cause) {
+      toast.error(cause instanceof Error ? cause.message : "Görsel yüklenemedi.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const clear = async (target: "avatar" | "banner") => {
+    try {
+      if (target === "avatar") await setAvatar({ storageId: null });
+      else await setCoverImage({ storageId: null });
+      toast.success("Görsel kaldırıldı.");
+    } catch (cause) {
+      toast.error(cause instanceof Error ? cause.message : "Kaldırılamadı.");
+    }
+  };
+
+  return (
+    <div className="border-t border-border pt-4">
+      <p className="stat-label">Görseller</p>
+      <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+        Galerinden kendi profil fotoğrafını ve banner görselini seç. Yükleme
+        yapmazsan profilinde seçtiğin karakter ve favori animen görünür.
+      </p>
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <ImageSlot
+          title="Profil fotoğrafı"
+          hint="Kare olarak kırpılır"
+          square
+          current={profile.avatarUrl ?? profile.characterImage ?? profile.image}
+          busy={busy === "avatar"}
+          canClear={Boolean(profile.avatarUrl)}
+          onPick={(file) => void pick(file, "avatar")}
+          onClear={() => void clear("avatar")}
+        />
+        <ImageSlot
+          title="Banner"
+          hint="Geniş görsel önerilir"
+          current={profile.bannerUrl}
+          busy={busy === "banner"}
+          canClear={Boolean(profile.bannerUrl)}
+          onPick={(file) => void pick(file, "banner")}
+          onClear={() => void clear("banner")}
+        />
+      </div>
+    </div>
+  );
+}
+
+/** One upload tile: preview, "galeriden seç" and an optional remove action. */
+function ImageSlot({
+  title,
+  hint,
+  current,
+  busy,
+  square,
+  canClear,
+  onPick,
+  onClear,
+}: {
+  title: string;
+  hint: string;
+  current?: string;
+  busy: boolean;
+  square?: boolean;
+  canClear: boolean;
+  onPick: (file: File) => void;
+  onClear: () => void;
+}) {
+  return (
+    <div className="rounded-[3px] border border-border bg-background/40 p-2.5">
+      <p className="text-[11px] font-medium text-foreground">{title}</p>
+      <p className="text-[10px] text-muted-foreground">{hint}</p>
+
+      <div className="mt-2 flex items-center gap-2.5">
+        <span
+          className={cn(
+            "relative shrink-0 overflow-hidden rounded-[2px] border border-border bg-secondary",
+            square ? "size-14" : "h-14 w-24",
+          )}
+        >
+          {current ? (
+            <img src={current} alt="" className="size-full object-cover" />
+          ) : null}
+        </span>
+
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <label
+            className={cn(
+              "inline-flex cursor-pointer items-center gap-1.5 rounded-[3px] border border-border px-2.5 py-1.5 text-[11px] text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground",
+              busy && "pointer-events-none opacity-60",
+            )}
+          >
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={busy}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = "";
+                if (file) onPick(file);
+              }}
+            />
+            {busy ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <ImagePlus className="size-3.5" />
+            )}
+            Galeriden seç
+          </label>
+
+          {canClear ? (
+            <button
+              type="button"
+              onClick={onClear}
+              className="text-[11px] text-muted-foreground transition-colors hover:text-destructive"
+            >
+              Kaldır
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </div>
   );
 }
 

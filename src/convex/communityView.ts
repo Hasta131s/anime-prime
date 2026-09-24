@@ -112,6 +112,10 @@ export type ProfileView = {
   displayName: string;
   handle?: string;
   image?: string;
+  /** Profile photo the member uploaded from their gallery. */
+  avatarUrl?: string;
+  /** Banner the member uploaded from their gallery. */
+  bannerUrl?: string;
   tagline?: string;
   bio?: string;
   location?: string;
