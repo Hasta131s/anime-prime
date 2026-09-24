@@ -178,6 +178,93 @@ export type ProfileStats = {
   favorites: number;
 };
 
+// --- roles -----------------------------------------------------------------
+
+/** Roles an admin can hand out. The values match the `users.role` validator. */
+export type CommunityRole =
+  | "admin"
+  | "moderator"
+  | "editor"
+  | "member"
+  | "newcomer";
+
+export const ROLE_OPTIONS: Array<{
+  value: CommunityRole;
+  label: string;
+  hint: string;
+}> = [
+  { value: "admin", label: "Yönetici", hint: "Panelin tamamı: rol, ban ve tema" },
+  { value: "moderator", label: "Moderatör", hint: "Yorumları denetler ve kaldırır" },
+  { value: "editor", label: "Editör", hint: "İçerik ve kaynak katkısı" },
+  { value: "member", label: "Üye", hint: "Standart üye yetkisi" },
+  { value: "newcomer", label: "En yeni üye", hint: "Yeni katılanları karşılayan rozet" },
+];
+
+// --- profile sections -------------------------------------------------------
+
+/** Sections a member can hide from their public profile. */
+export const PROFILE_SECTIONS = [
+  { id: "stats", label: "İstatistik şeridi", hint: "İzlenen anime/bölüm, favori ve yorum sayıları" },
+  { id: "activity", label: "Aktiflik grafiği", hint: "Son 14 günün aktivitesi ve son görülme" },
+  { id: "favorites", label: "Favori animeler", hint: "Seçtiğin favori yapımlar" },
+  { id: "history", label: "İzleme geçmişi", hint: "Son izlediğin bölümler" },
+  { id: "comments", label: "Yorumlar", hint: "Son yorumların" },
+] as const;
+
+export type ProfileSectionId = (typeof PROFILE_SECTIONS)[number]["id"];
+
+export const PROFILE_SECTION_IDS = PROFILE_SECTIONS.map((section) => section.id);
+
+export function isSectionHidden(
+  hidden: string[] | undefined,
+  id: ProfileSectionId,
+) {
+  return (hidden ?? []).includes(id);
+}
+
+/** Turns a member's stored selection into labels for the profile summary. */
+export function hiddenSectionLabels(hidden: string[] | undefined) {
+  const set = new Set(hidden ?? []);
+  return PROFILE_SECTIONS.filter((section) => set.has(section.id)).map(
+    (section) => section.label,
+  );
+}
+
+// --- site themes ------------------------------------------------------------
+
+/**
+ * Colour palettes the admin can switch between. Ids match the `[data-theme]`
+ * blocks in `index.css`; the first entry is the palette the site ships with.
+ */
+export type SitePalette = {
+  id: string;
+  label: string;
+  hint: string;
+  /** Three colours used to preview the palette in the admin panel. */
+  swatch: [string, string, string];
+};
+
+export const DEFAULT_PALETTE = "midnight";
+
+export const SITE_PALETTES: SitePalette[] = [
+  {
+    id: DEFAULT_PALETTE,
+    label: "Gece Mavisi (hazır)",
+    hint: "Sitenin varsayılan koyu teması",
+    swatch: ["#0b1622", "#151f2e", "#3db4f2"],
+  },
+  { id: "sakura", label: "Sakura", hint: "Pembe vurgulu koyu tema", swatch: ["#190f16", "#241822", "#ef6ea3"] },
+  { id: "emerald", label: "Zümrüt", hint: "Yeşil vurgulu koyu tema", swatch: ["#081711", "#12251b", "#37d67a"] },
+  { id: "amber", label: "Kehribar", hint: "Turuncu vurgulu sıcak tema", swatch: ["#191206", "#241b0d", "#f2a03d"] },
+  { id: "violet", label: "Menekşe", hint: "Mor vurgulu koyu tema", swatch: ["#110e20", "#1b1631", "#a17bf7"] },
+  { id: "crimson", label: "Kızıl", hint: "Kırmızı vurgulu sinema teması", swatch: ["#170b0e", "#231115", "#f2566d"] },
+  { id: "frost", label: "Buz (açık)", hint: "Açık zemin, mavi vurgu", swatch: ["#eef2f8", "#ffffff", "#2f7fd6"] },
+];
+
+export function paletteById(id: string | null | undefined): SitePalette {
+  return SITE_PALETTES.find((palette) => palette.id === id) ?? SITE_PALETTES[0];
+}
+
 export type ProfileView = {
   userId: Id<"users">;
   displayName: string;
@@ -211,6 +298,10 @@ export type ProfileView = {
   banned: boolean;
   banReason?: string;
   isMe: boolean;
+  /** Sections the member hid from their public profile. */
+  hiddenSections?: string[];
+  /** Last time the account was seen on the site. */
+  lastSeenAt?: number;
   customized: boolean;
   joinedAt: number;
   updatedAt: number;
@@ -247,11 +338,56 @@ export type MemberCardView = {
   role?: string;
   isAnonymous: boolean;
   banned: boolean;
+  banReason?: string;
+  bannedAt?: number;
+  /** Who issued the suspension, by display name. Only filled in the ban list. */
+  bannedByName?: string;
   comments: number;
   titles: number;
   episodes: number;
   favorites: number;
   joinedAt: number;
+  lastSeenAt?: number;
+};
+
+/** Compact card shown when a reader hovers a comment author. */
+export type ProfilePreview = {
+  userId: Id<"users">;
+  displayName: string;
+  username?: string;
+  handle?: string;
+  image?: string;
+  characterImage?: string;
+  tagline?: string;
+  role?: string;
+  banned: boolean;
+  isPublic: boolean;
+  isAnonymous: boolean;
+  joinedAt: number;
+  lastSeenAt?: number;
+  comments: number;
+  titles: number;
+  episodes: number;
+  favorites: number;
+};
+
+/** One day of the profile activity sparkline. */
+export type ActivityDay = {
+  /** Local midnight of the day, as epoch ms. */
+  start: number;
+  /** Short weekday label, e.g. "Pzt". */
+  label: string;
+  /** Comments written + episodes recorded that day. */
+  count: number;
+};
+
+export type ProfileActivity = {
+  lastSeenAt: number | null;
+  days: ActivityDay[];
+  comments: number;
+  episodes: number;
+  /** Longest run of consecutive days with activity inside the window. */
+  streak: number;
 };
 
 /** Best available label for a person, in the order the site uses everywhere. */
@@ -287,11 +423,23 @@ export function initialsFor(name: string) {
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 }
 
-/** Turkish role wording used on comments and member lists. */
+/** Turkish role wording used on comments, profiles and member lists. */
 export function communityRoleLabel(role?: string) {
-  if (role === "admin") return "Yönetici";
-  if (role === "member") return "Üye";
-  return undefined;
+  return ROLE_OPTIONS.find((option) => option.value === role)?.label;
+}
+
+/** Badge colours per role, so a badge reads the same everywhere. */
+export function communityRoleTone(role?: string) {
+  if (role === "admin") return "bg-destructive/15 text-destructive";
+  if (role === "moderator") return "bg-primary/15 text-primary";
+  if (role === "editor") return "bg-primary/10 text-brand-bright";
+  if (role === "newcomer") return "bg-accent text-foreground";
+  return "bg-secondary text-muted-foreground";
+}
+
+/** Roles that may act on other people's content. */
+export function isModeratingRole(role?: string) {
+  return role === "admin" || role === "moderator";
 }
 
 // ---------------------------------------------------------------------------

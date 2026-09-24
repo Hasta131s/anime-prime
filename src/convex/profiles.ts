@@ -19,7 +19,14 @@ import {
   type MutationCtx,
   type QueryCtx,
 } from "./_generated/server";
-import { currentUser, isAdmin, requireMember } from "./access";
+import {
+  OWNER_HANDLES,
+  canModerate,
+  currentUser,
+  isAdmin,
+  isOwnerEmail,
+  requireMember,
+} from "./access";
 import { fetchCharacter, searchCharacters } from "./anilist";
 import { animeRowByAnilistId, cardsByAnilistIds } from "./animeStore";
 import {
@@ -28,17 +35,24 @@ import {
   MAX_DISPLAY_NAME,
   MAX_FAVORITES,
   MAX_TAGLINE,
+  PROFILE_SECTION_IDS,
   USERNAME_COOLDOWN_MS,
+  WEEKDAY_SHORT,
   handleFromEmail,
   isReservedUsername,
+  isSectionHidden,
   normalizeUsername,
   resolveDisplayName,
   usernameCooldownDaysLeft,
   usernameError,
+  type ActivityDay,
   type CharacterPick,
   type CommentView,
   type MemberCardView,
+  type ProfileActivity,
+  type ProfilePreview,
   type ProfileResult,
+  type ProfileSectionId,
   type ProfileView,
   type UsernameStatus,
   type WatchEntryView,
@@ -49,6 +63,17 @@ import { ensureProfile, findProfileRow } from "./profileStore";
 const PROFILE_HISTORY_LIMIT = 24;
 const PROFILE_COMMENT_LIMIT = 6;
 const MEMBER_SCAN_LIMIT = 300;
+/** Sparkline window and the rows scanned to fill it. */
+const ACTIVITY_DAYS = 14;
+const ACTIVITY_SCAN_LIMIT = 400;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Local midnight for a timestamp — the buckets the sparkline uses. */
+function dayStartOf(timestamp: number) {
+  const date = new Date(timestamp);
+  date.setHours(0, 0, 0, 0);
+  return date.getTime();
+}
 
 function clean(value: string | undefined, max: number) {
   if (value === undefined) return undefined;
@@ -113,7 +138,7 @@ async function buildProfileView(
   user: Doc<"users">,
   profile: Doc<"profiles"> | null,
   viewerId: Id<"users"> | null,
-  admin: boolean,
+  staff: boolean,
 ): Promise<ProfileView> {
   const displayName = resolveDisplayName(user, profile);
   const view: ProfileView = {
@@ -157,6 +182,10 @@ async function buildProfileView(
   if (user.image) view.image = user.image;
   if (user.role) view.role = user.role;
   if (user.banReason) view.banReason = user.banReason;
+  if (user.lastSeenAt) view.lastSeenAt = user.lastSeenAt;
+  if (profile?.hiddenSections && profile.hiddenSections.length > 0) {
+    view.hiddenSections = profile.hiddenSections;
+  }
   if (profile?.tagline) view.tagline = profile.tagline;
   if (profile?.bio) view.bio = profile.bio;
   if (profile?.location) view.location = profile.location;
@@ -170,7 +199,7 @@ async function buildProfileView(
   const banner = profile?.bannerAnilistId ?? profile?.favoriteAnimeIds[0];
   if (banner) view.bannerAnilistId = banner;
 
-  void admin; // reserved for future moderation-specific fields
+  void staff; // reserved for future moderation-specific fields
   return view;
 }
 
@@ -215,16 +244,16 @@ async function buildResult(
   ctx: QueryCtx,
   userId: Id<"users">,
   viewerId: Id<"users"> | null,
-  admin: boolean,
+  staff: boolean,
 ): Promise<ProfileResult> {
   const user = await ctx.db.get(userId);
   if (!user) return EMPTY_RESULT;
 
   const profile = await findProfileRow(ctx, userId);
-  const view = await buildProfileView(ctx, user, profile, viewerId, admin);
+  const view = await buildProfileView(ctx, user, profile, viewerId, staff);
 
   const isOwner = viewerId === userId;
-  if (!view.isPublic && !isOwner && !admin) {
+  if (!view.isPublic && !isOwner && !staff) {
     return {
       profile: view,
       stats: { titles: 0, episodes: 0, comments: 0, favorites: 0 },
@@ -235,29 +264,40 @@ async function buildResult(
     };
   }
 
-  const [favorites, history, commentRows] = await Promise.all([
-    cardsByAnilistIds(ctx, view.favoriteAnimeIds),
-    loadHistory(ctx, userId, PROFILE_HISTORY_LIMIT),
-    ctx.db
-      .query("comments")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .order("desc")
-      .take(PROFILE_COMMENT_LIMIT),
-  ]);
+  // A hidden section is never even loaded for a visitor; the owner keeps the
+  // full view of their own profile.
+  const hide = (id: ProfileSectionId) =>
+    !isOwner && isSectionHidden(profile?.hiddenSections, id);
+
+  const favorites = hide("favorites")
+    ? []
+    : await cardsByAnilistIds(ctx, view.favoriteAnimeIds);
+  const history = hide("history")
+    ? []
+    : await loadHistory(ctx, userId, PROFILE_HISTORY_LIMIT);
+  const commentRows = hide("comments")
+    ? []
+    : await ctx.db
+        .query("comments")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .order("desc")
+        .take(PROFILE_COMMENT_LIMIT);
 
   const comments: CommentView[] = await decorateComments(ctx, commentRows, {
     userId: viewerId,
-    admin,
+    staff,
   });
 
   return {
     profile: view,
-    stats: {
-      titles: profile?.watchedTitleCount ?? 0,
-      episodes: profile?.watchedEpisodeCount ?? 0,
-      comments: profile?.commentCount ?? 0,
-      favorites: view.favoriteAnimeIds.length,
-    },
+    stats: hide("stats")
+      ? { titles: 0, episodes: 0, comments: 0, favorites: 0 }
+      : {
+          titles: profile?.watchedTitleCount ?? 0,
+          episodes: profile?.watchedEpisodeCount ?? 0,
+          comments: profile?.commentCount ?? 0,
+          favorites: view.favoriteAnimeIds.length,
+        },
     favorites,
     history,
     comments,
@@ -287,6 +327,9 @@ export async function memberCardsFor(
       };
       const handle = profile?.username ?? handleFromEmail(user.email);
       if (handle) card.handle = handle;
+      if (user.bannedAt) card.bannedAt = user.bannedAt;
+      if (user.banReason) card.banReason = user.banReason;
+      if (user.lastSeenAt) card.lastSeenAt = user.lastSeenAt;
 
       // An uploaded photo beats both the account avatar and the character
       // portrait, so the face a member picked is the one shown in lists.
@@ -316,7 +359,7 @@ export const me = query({
   handler: async (ctx): Promise<ProfileResult> => {
     const user = await currentUser(ctx);
     if (!user) return EMPTY_RESULT;
-    return await buildResult(ctx, user._id, user._id, isAdmin(user));
+    return await buildResult(ctx, user._id, user._id, canModerate(user));
   },
 });
 
@@ -332,7 +375,7 @@ export const detail = query({
     const viewer = await currentUser(ctx);
     const userId = ctx.db.normalizeId("users", args.userId);
     if (!userId) return EMPTY_RESULT;
-    return await buildResult(ctx, userId, viewer?._id ?? null, isAdmin(viewer));
+    return await buildResult(ctx, userId, viewer?._id ?? null, canModerate(viewer));
   },
 });
 
@@ -365,6 +408,155 @@ export const members = query({
   },
 });
 
+/**
+ * Activity for one member: the last-seen stamp plus a 14-day sparkline built
+ * from real rows — comments written and episodes recorded. Nothing is cached or
+ * invented, so a quiet week honestly shows as a flat line.
+ */
+export const activity = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args): Promise<ProfileActivity | null> => {
+    const targetId = ctx.db.normalizeId("users", args.userId);
+    if (!targetId) return null;
+
+    const viewer = await currentUser(ctx);
+    const [user, profile] = await Promise.all([
+      ctx.db.get(targetId),
+      findProfileRow(ctx, targetId),
+    ]);
+    if (!user) return null;
+
+    // A hidden (or private) section simply is not served to anyone else.
+    const owner = viewer?._id === targetId;
+    if (!owner && !isAdmin(viewer)) {
+      if (!(profile?.isPublic ?? true)) return null;
+      if (isSectionHidden(profile?.hiddenSections, "activity")) return null;
+    }
+
+    const todayStart = dayStartOf(Date.now());
+    const windowStart = todayStart - (ACTIVITY_DAYS - 1) * DAY_MS;
+
+    const [history, comments] = await Promise.all([
+      ctx.db
+        .query("watchHistory")
+        .withIndex("by_user", (q) => q.eq("userId", targetId))
+        .order("desc")
+        .take(ACTIVITY_SCAN_LIMIT),
+      ctx.db
+        .query("comments")
+        .withIndex("by_user", (q) => q.eq("userId", targetId))
+        .order("desc")
+        .take(ACTIVITY_SCAN_LIMIT),
+    ]);
+
+    const counts = new Array<number>(ACTIVITY_DAYS).fill(0);
+    let episodes = 0;
+    let commentCount = 0;
+
+    const bucket = (at: number) => {
+      if (at < windowStart) return false;
+      const index = Math.min(
+        ACTIVITY_DAYS - 1,
+        Math.floor((at - windowStart) / DAY_MS),
+      );
+      counts[index] += 1;
+      return true;
+    };
+
+    for (const row of history) {
+      if (bucket(row.watchedAt)) episodes += 1;
+      else break;
+    }
+    for (const row of comments) {
+      // A soft-deleted comment stays in the thread but is not activity.
+      if (row.deletedAt) continue;
+      if (bucket(row.createdAt)) commentCount += 1;
+      else break;
+    }
+
+    let streak = 0;
+    let run = 0;
+    for (const count of counts) {
+      run = count > 0 ? run + 1 : 0;
+      if (run > streak) streak = run;
+    }
+
+    const days: ActivityDay[] = counts.map((count, index) => {
+      const start = windowStart + index * DAY_MS;
+      return { start, label: WEEKDAY_SHORT[new Date(start).getDay()], count };
+    });
+
+    return {
+      lastSeenAt: user.lastSeenAt ?? null,
+      days,
+      comments: commentCount,
+      episodes,
+      streak,
+    };
+  },
+});
+
+/**
+ * Everything a hover card needs to introduce a comment author.
+ * Respects the member's privacy switches: a private profile shows who they are
+ * but never how much they use the site.
+ */
+export const preview = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args): Promise<ProfilePreview | null> => {
+    const targetId = ctx.db.normalizeId("users", args.userId);
+    if (!targetId) return null;
+
+    const [user, profile] = await Promise.all([
+      ctx.db.get(targetId),
+      findProfileRow(ctx, targetId),
+    ]);
+    if (!user) return null;
+
+    const viewer = await currentUser(ctx);
+    const own = viewer?._id === targetId;
+    const isPublic = profile?.isPublic ?? true;
+    const visible = isPublic || own || isAdmin(viewer);
+    const uploads = await uploadedImages(ctx, profile);
+
+    const card: ProfilePreview = {
+      userId: user._id,
+      displayName: resolveDisplayName(user, profile),
+      banned: Boolean(user.bannedAt),
+      isPublic,
+      isAnonymous: Boolean(user.isAnonymous),
+      joinedAt: user._creationTime,
+      comments: 0,
+      titles: 0,
+      episodes: 0,
+      favorites: 0,
+    };
+
+    if (profile?.username) card.username = profile.username;
+    const handle = profile?.username ?? handleFromEmail(user.email);
+    if (handle) card.handle = handle;
+    if (user.role) card.role = user.role;
+    if (profile?.tagline) card.tagline = profile.tagline;
+    if (uploads.avatarUrl) card.image = uploads.avatarUrl;
+    else if (profile?.characterImage) card.characterImage = profile.characterImage;
+    else if (user.image) card.image = user.image;
+
+    if (visible) {
+      if (!isSectionHidden(profile?.hiddenSections, "stats")) {
+        card.comments = profile?.commentCount ?? 0;
+        card.titles = profile?.watchedTitleCount ?? 0;
+        card.episodes = profile?.watchedEpisodeCount ?? 0;
+        card.favorites = profile?.favoriteAnimeIds.length ?? 0;
+      }
+      if (!isSectionHidden(profile?.hiddenSections, "activity")) {
+        if (user.lastSeenAt) card.lastSeenAt = user.lastSeenAt;
+      }
+    }
+
+    return card;
+  },
+});
+
 // ---------------------------------------------------------------------------
 // Writes
 // ---------------------------------------------------------------------------
@@ -378,6 +570,7 @@ export const update = mutation({
     website: v.optional(v.string()),
     favoriteGenre: v.optional(v.string()),
     isPublic: v.optional(v.boolean()),
+    hiddenSections: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     const user = await requireMember(ctx);
@@ -410,6 +603,14 @@ export const update = mutation({
       patch.favoriteGenre = value ? value : undefined;
     }
     if (args.isPublic !== undefined) patch.isPublic = args.isPublic;
+    if (args.hiddenSections !== undefined) {
+      // Only known section ids are stored, so the profile never hides a typo
+      // and the UI can rely on the list.
+      const allowed = new Set<string>(PROFILE_SECTION_IDS);
+      patch.hiddenSections = Array.from(
+        new Set(args.hiddenSections.filter((id) => allowed.has(id))),
+      );
+    }
 
     await ctx.db.patch(profile._id, patch);
   },
@@ -483,6 +684,11 @@ export const setBanner = mutation({
 // Username
 // ---------------------------------------------------------------------------
 
+/** True for the handles reserved for the site owner. */
+function isOwnerHandle(value: string) {
+  return OWNER_HANDLES.includes(value);
+}
+
 /**
  * Claims or renames the member's own @username.
  *
@@ -513,6 +719,10 @@ export const setUsername = mutation({
 
     const invalid = usernameError(value);
     if (invalid) throw new Error(invalid);
+    // Owner handles exist so the site owner always has a name of their own.
+    if (isOwnerHandle(value) && !isOwnerEmail(user.email)) {
+      throw new Error("Bu kullanıcı adı siteye ayrılmış.");
+    }
 
     const taken = await ctx.db
       .query("profiles")
@@ -541,13 +751,14 @@ export const usernameAvailable = query({
     const invalid = usernameError(value);
     if (invalid) return isReservedUsername(value) ? "reserved" : "invalid";
 
+    const viewer = await currentUser(ctx);
+    if (isOwnerHandle(value) && !isOwnerEmail(viewer?.email)) return "reserved";
+
     const taken = await ctx.db
       .query("profiles")
       .withIndex("by_username", (q) => q.eq("username", value))
       .first();
     if (!taken) return "ok";
-
-    const viewer = await currentUser(ctx);
     return viewer && taken.userId === viewer._id ? "current" : "taken";
   },
 });

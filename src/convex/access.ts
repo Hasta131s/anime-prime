@@ -10,6 +10,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
+import { findProfileRow } from "./profileStore";
 
 export type ReadCtx = QueryCtx | MutationCtx;
 
@@ -21,6 +22,50 @@ export async function currentUser(ctx: ReadCtx): Promise<Doc<"users"> | null> {
 
 export function isAdmin(user: Doc<"users"> | null) {
   return user?.role === "admin";
+}
+
+/**
+ * Accounts that always keep the admin role, keyed by their e-mail name.
+ * The site owner signs in with one of these, so a recreated row can never lock
+ * them out of the panel they own.
+ */
+export const OWNER_HANDLES = ["tuna"];
+
+/** True when the account belongs to the site owner. */
+export function isOwnerEmail(email: string | undefined) {
+  if (!email) return false;
+  const local = email.split("@")[0]?.trim().toLowerCase();
+  return Boolean(local && OWNER_HANDLES.includes(local));
+}
+
+/**
+ * Keeps the owner's admin role in place. Called from the presence ping, which
+ * runs on every session, so the owner never has to claim rights manually.
+ *
+ * The owner is recognised either by the e-mail they sign in with or by having
+ * claimed one of the reserved owner handles — and only that account may claim
+ * them, so nobody can promote themselves into the panel.
+ */
+export async function ensureOwnerRole(
+  ctx: MutationCtx,
+  user: Doc<"users">,
+): Promise<boolean> {
+  if (user.role === "admin") return false;
+
+  if (!isOwnerEmail(user.email)) {
+    const profile = await findProfileRow(ctx, user._id);
+    if (!profile?.username || !OWNER_HANDLES.includes(profile.username)) {
+      return false;
+    }
+  }
+
+  await ctx.db.patch(user._id, { role: "admin" });
+  return true;
+}
+
+/** Admin or moderator — the roles that may act on other people's content. */
+export function canModerate(user: Doc<"users"> | null) {
+  return user?.role === "admin" || user?.role === "moderator";
 }
 
 /** A real, non-anonymous account — the bar for anything that gets moderated. */

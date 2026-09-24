@@ -12,11 +12,17 @@
 
 import { Panel } from "@/components/site/panel";
 import { Button } from "@/components/ui/button";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 import { api } from "@/convex/_generated/api";
 import {
   COMMENT_MAX_LENGTH,
   COMMENT_SORTS,
   communityRoleLabel,
+  communityRoleTone,
   initialsFor,
   normalizeCommentSort,
   type CommentAuthorView,
@@ -307,16 +313,19 @@ function CommentRow({
         <AuthorAvatar author={comment.author} />
         <div className="min-w-0 flex-1">
           <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px]">
-            <span className="font-medium text-foreground">
-              {comment.author.name}
-            </span>
+            <AuthorName author={comment.author} />
             {comment.author.handle ? (
               <span className="text-[11px] text-muted-foreground">
                 @{comment.author.handle}
               </span>
             ) : null}
             {communityRoleLabel(comment.author.role) ? (
-              <span className="rounded-[2px] bg-primary/15 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+              <span
+                className={cn(
+                  "rounded-[2px] px-1.5 py-0.5 text-[10px] font-medium",
+                  communityRoleTone(comment.author.role),
+                )}
+              >
                 {communityRoleLabel(comment.author.role)}
               </span>
             ) : null}
@@ -492,9 +501,14 @@ function ReplyRow({ reply }: { reply: CommentView }) {
         <AuthorAvatar author={reply.author} small />
         <div className="min-w-0 flex-1">
           <p className="flex flex-wrap items-center gap-x-2 text-[12px]">
-            <span className="font-medium text-foreground">{reply.author.name}</span>
+            <AuthorName author={reply.author} />
             {communityRoleLabel(reply.author.role) ? (
-              <span className="rounded-[2px] bg-primary/15 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+              <span
+                className={cn(
+                  "rounded-[2px] px-1.5 py-0.5 text-[10px] font-medium",
+                  communityRoleTone(reply.author.role),
+                )}
+              >
                 {communityRoleLabel(reply.author.role)}
               </span>
             ) : null}
@@ -557,6 +571,155 @@ function ReplyRow({ reply }: { reply: CommentView }) {
         ) : null}
       </div>
     </article>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Author preview
+// ---------------------------------------------------------------------------
+
+/**
+ * The name of a comment author. Reading it on hover (or tapping on a phone)
+ * opens a compact profile card, so a thread never forces a full page jump —
+ * while the name itself stays a link to the real profile.
+ */
+function AuthorName({
+  author,
+  className,
+}: {
+  author: CommentAuthorView;
+  className?: string;
+}) {
+  return (
+    <HoverCard openDelay={200} closeDelay={120}>
+      <HoverCardTrigger asChild>
+        <Link
+          to={`/profil/${author.userId}`}
+          className={cn(
+            "font-medium text-foreground transition-colors hover:text-primary",
+            className,
+          )}
+        >
+          {author.name}
+        </Link>
+      </HoverCardTrigger>
+      <HoverCardContent
+        align="start"
+        className="w-[280px] rounded-[3px] border-border bg-card p-3"
+      >
+        <AuthorPreviewCard userId={author.userId} />
+      </HoverCardContent>
+    </HoverCard>
+  );
+}
+
+function AuthorPreviewCard({ userId }: { userId: CommentAuthorView["userId"] }) {
+  const preview = useQuery(api.profiles.preview, { userId });
+
+  if (preview === undefined) {
+    return (
+      <p className="flex items-center gap-2 text-[11px] text-muted-foreground">
+        <Loader2 className="size-3 animate-spin" />
+        Profil yükleniyor…
+      </p>
+    );
+  }
+  if (preview === null) {
+    return (
+      <p className="text-[11px] text-muted-foreground">Profil bulunamadı.</p>
+    );
+  }
+
+  const portrait = preview.image ?? preview.characterImage;
+
+  return (
+    <div className="space-y-2.5">
+      <div className="flex items-center gap-2.5">
+        {portrait ? (
+          <img
+            src={portrait}
+            alt=""
+            className="size-11 shrink-0 rounded-[2px] border border-border object-cover object-top"
+          />
+        ) : (
+          <span
+            aria-hidden="true"
+            className="flex size-11 shrink-0 items-center justify-center rounded-[2px] border border-border bg-secondary text-[13px] font-semibold text-muted-foreground"
+          >
+            {initialsFor(preview.displayName)}
+          </span>
+        )}
+        <div className="min-w-0">
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[13px] font-semibold text-foreground">
+            <span className="truncate">{preview.displayName}</span>
+            {communityRoleLabel(preview.role) ? (
+              <span
+                className={cn(
+                  "rounded-[2px] px-1.5 py-0.5 text-[10px] font-medium",
+                  communityRoleTone(preview.role),
+                )}
+              >
+                {communityRoleLabel(preview.role)}
+              </span>
+            ) : null}
+          </p>
+          {preview.handle ? (
+            <p className="truncate text-[11px] text-muted-foreground">
+              @{preview.handle}
+            </p>
+          ) : null}
+        </div>
+      </div>
+
+      {preview.tagline ? (
+        <p className="line-clamp-2 text-[11px] leading-relaxed text-muted-foreground">
+          {preview.tagline}
+        </p>
+      ) : null}
+
+      {preview.banned ? (
+        <p className="rounded-[2px] bg-destructive/15 px-2 py-1 text-[10px] font-medium text-destructive">
+          Hesap askıda
+        </p>
+      ) : null}
+
+      {preview.isPublic ? (
+        <div className="grid grid-cols-3 gap-2 border-t border-border pt-2 text-center">
+          {[
+            { label: "Yorum", value: preview.comments },
+            { label: "Anime", value: preview.titles },
+            { label: "Favori", value: preview.favorites },
+          ].map((stat) => (
+            <div key={stat.label}>
+              <p className="text-[13px] font-semibold text-foreground">
+                {stat.value}
+              </p>
+              <p className="text-[9px] tracking-wide text-muted-foreground uppercase">
+                {stat.label}
+              </p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="border-t border-border pt-2 text-[10px] text-muted-foreground">
+          Gizli profil
+        </p>
+      )}
+
+      <div className="flex items-center justify-between gap-2 border-t border-border pt-2 text-[10px] text-muted-foreground">
+        <span>
+          {preview.lastSeenAt
+            ? `Son aktiflik ${formatRelative(preview.lastSeenAt)}`
+            : `${formatRelative(preview.joinedAt)} katıldı`}
+        </span>
+        <Link
+          to={`/profil/${preview.userId}`}
+          className="font-medium text-primary hover:underline"
+        >
+          Profili aç
+        </Link>
+      </div>
+    </div>
   );
 }
 

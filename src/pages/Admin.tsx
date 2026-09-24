@@ -20,6 +20,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Tabs,
   TabsContent,
   TabsList,
@@ -27,8 +34,13 @@ import {
 } from "@/components/ui/tabs";
 import { api } from "@/convex/_generated/api";
 import {
+  ROLE_OPTIONS,
+  SITE_PALETTES,
   communityRoleLabel,
+  communityRoleTone,
   initialsFor,
+  paletteById,
+  type CommunityRole,
   type MemberCardView,
 } from "@/convex/communityView";
 import { useAuth } from "@/hooks/use-auth";
@@ -37,14 +49,15 @@ import { formatDateTime, formatRelative } from "@/lib/anime-labels";
 import { cn } from "@/lib/utils";
 import { useMutation, useQuery } from "convex/react";
 import {
-  ArrowDownCircle,
-  ArrowUpCircle,
+  Check,
   Loader2,
+  Palette,
   Search,
   ShieldAlert,
   ShieldCheck,
   Trash2,
   TriangleAlert,
+  UserRound,
 } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
@@ -115,6 +128,8 @@ export default function Admin() {
             <TabsTrigger value="overview">Genel bakış</TabsTrigger>
             <TabsTrigger value="members">Üyeler</TabsTrigger>
             <TabsTrigger value="comments">Yorumlar</TabsTrigger>
+            <TabsTrigger value="bans">Ban listesi</TabsTrigger>
+            <TabsTrigger value="theme">Görünüm</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="mt-4">
@@ -122,6 +137,7 @@ export default function Admin() {
               <StatCard label="Üye" value={overview.members} tone="text-primary" />
               <StatCard label="Misafir oturum" value={overview.guests} />
               <StatCard label="Yönetici" value={overview.admins} />
+              <StatCard label="Moderatör" value={overview.moderators} />
               <StatCard
                 label="Askıya alınan"
                 value={overview.banned}
@@ -158,6 +174,14 @@ export default function Admin() {
 
           <TabsContent value="comments" className="mt-4">
             <CommentsTab />
+          </TabsContent>
+
+          <TabsContent value="bans" className="mt-4">
+            <BannedTab />
+          </TabsContent>
+
+          <TabsContent value="theme" className="mt-4">
+            <ThemeTab />
           </TabsContent>
         </Tabs>
       </Container>
@@ -230,6 +254,7 @@ function MembersTab() {
 }
 
 function MemberRow({ member }: { member: MemberCardView }) {
+  const { user } = useAuth();
   const ban = useMutation(api.admin.ban);
   const unban = useMutation(api.admin.unban);
   const setRole = useMutation(api.admin.setRole);
@@ -251,6 +276,7 @@ function MemberRow({ member }: { member: MemberCardView }) {
   };
 
   const isAdmin = member.role === "admin";
+  const isSelf = user?._id === member.userId;
   // The chosen character is the member's face; the account avatar is the fallback.
   const portrait = member.characterImage ?? member.image;
 
@@ -274,7 +300,12 @@ function MemberRow({ member }: { member: MemberCardView }) {
           >
             {member.displayName}
             {communityRoleLabel(member.role) ? (
-              <span className="rounded-[2px] bg-primary/15 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+              <span
+                className={cn(
+                  "rounded-[2px] px-1.5 py-0.5 text-[10px] font-medium",
+                  communityRoleTone(member.role),
+                )}
+              >
                 {communityRoleLabel(member.role)}
               </span>
             ) : null}
@@ -298,37 +329,33 @@ function MemberRow({ member }: { member: MemberCardView }) {
       </span>
 
       <span className="flex flex-wrap items-center gap-1.5">
-        {!isAdmin ? (
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={busy}
-            onClick={() =>
-              void run(
-                () => setRole({ userId: member.userId, role: "admin" }),
-                "Yönetici yapıldı.",
-              )
-            }
-          >
-            <ArrowUpCircle className="size-3.5" />
-            Yönetici yap
-          </Button>
-        ) : (
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={busy}
-            onClick={() =>
-              void run(
-                () => setRole({ userId: member.userId, role: "member" }),
-                "Yöneticilik kaldırıldı.",
-              )
-            }
-          >
-            <ArrowDownCircle className="size-3.5" />
-            Yetkiyi al
-          </Button>
-        )}
+        <Select
+          value={member.role ?? "member"}
+          disabled={busy || isSelf}
+          onValueChange={(value) =>
+            void run(
+              () => setRole({ userId: member.userId, role: value as CommunityRole }),
+              "Rol güncellendi.",
+            )
+          }
+        >
+          <SelectTrigger className="h-8 w-[148px] text-[12px]" aria-label="Rol ver">
+            <UserRound className="size-3.5 shrink-0 text-muted-foreground" />
+            <SelectValue placeholder="Rol" />
+          </SelectTrigger>
+          <SelectContent>
+            {ROLE_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                <span className="flex flex-col">
+                  <span className="text-[12px] font-medium">{option.label}</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {option.hint}
+                  </span>
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         {member.banned ? (
           <Button
@@ -345,7 +372,7 @@ function MemberRow({ member }: { member: MemberCardView }) {
           <Button
             size="sm"
             variant="destructive"
-            disabled={busy || isAdmin}
+            disabled={busy || isAdmin || isSelf}
             onClick={() => setBanOpen(true)}
           >
             <ShieldAlert className="size-3.5" />
@@ -396,6 +423,178 @@ function MemberRow({ member }: { member: MemberCardView }) {
         </DialogContent>
       </Dialog>
     </li>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Ban list
+// ---------------------------------------------------------------------------
+
+/** Everyone the moderators suspended, with the reason and who did it. */
+function BannedTab() {
+  const banned = useQuery(api.admin.bannedMembers);
+  const unban = useMutation(api.admin.unban);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const restore = async (userId: MemberCardView["userId"], name: string) => {
+    setBusy(userId);
+    try {
+      await unban({ userId });
+      toast.success(`${name} için yasak kaldırıldı.`);
+    } catch (cause) {
+      toast.error(cause instanceof Error ? cause.message : "İşlem başarısız.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <Panel
+      title={`Ban listesi${banned ? ` (${banned.length})` : ""}`}
+      action={
+        <span className="text-[10px] text-muted-foreground">
+          Askıya alınan hesaplar okumaya devam eder
+        </span>
+      }
+      bodyClassName="p-0"
+    >
+      {banned === undefined ? (
+        <p className="flex items-center justify-center gap-2 py-8 text-[12px] text-muted-foreground">
+          <Loader2 className="size-3.5 animate-spin" />
+          Yükleniyor…
+        </p>
+      ) : banned.length === 0 ? (
+        <p className="p-3.5 text-[12px] text-muted-foreground">
+          Şu an askıya alınmış hesap yok.
+        </p>
+      ) : (
+        <ul className="divide-y divide-border">
+          {banned.map((member) => (
+            <li key={member.userId} className="flex flex-wrap items-center gap-3 p-3">
+              <span className="flex min-w-0 flex-1 items-start gap-2.5">
+                <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-[2px] bg-destructive/15 text-destructive">
+                  <ShieldAlert className="size-4" />
+                </span>
+                <span className="min-w-0">
+                  <Link
+                    to={`/profil/${member.userId}`}
+                    className="block truncate text-[13px] font-medium text-foreground transition-colors hover:text-primary"
+                  >
+                    {member.displayName}
+                  </Link>
+                  <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                    {member.banReason ?? "Sebep belirtilmedi"}
+                  </span>
+                  <span className="mt-0.5 block text-[10px] text-muted-foreground">
+                    {member.bannedAt
+                      ? `${formatDateTime(member.bannedAt, false)} askıya alındı`
+                      : "Askıya alındı"}
+                    {member.bannedByName ? ` · ${member.bannedByName}` : ""}
+                  </span>
+                </span>
+              </span>
+
+              <Button
+                size="sm"
+                disabled={busy === member.userId}
+                onClick={() => void restore(member.userId, member.displayName)}
+              >
+                {busy === member.userId ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <ShieldCheck className="size-3.5" />
+                )}
+                Yasağı kaldır
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Panel>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Appearance
+// ---------------------------------------------------------------------------
+
+/**
+ * Palette picker. One tap repaints the whole site for everyone, because the
+ * choice is stored in Convex and every client applies it on load.
+ */
+function ThemeTab() {
+  const palette = useQuery(api.settings.theme);
+  const setPalette = useMutation(api.settings.setPalette);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const current = paletteById(palette).id;
+
+  const apply = async (id: string, label: string) => {
+    if (id === current) return;
+    setBusy(id);
+    try {
+      await setPalette({ palette: id });
+      toast.success(`Tema değişti: ${label}`);
+    } catch (cause) {
+      toast.error(cause instanceof Error ? cause.message : "Tema değiştirilemedi.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <Panel
+      title="Tema renk paleti"
+      action={
+        <span className="text-[10px] text-muted-foreground">
+          Değişiklik herkeste anında geçerli
+        </span>
+      }
+    >
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {SITE_PALETTES.map((option) => {
+          const active = option.id === current;
+          return (
+            <button
+              key={option.id}
+              type="button"
+              disabled={busy !== null}
+              onClick={() => void apply(option.id, option.label)}
+              className={cn(
+                "flex items-center gap-3 rounded-[3px] border p-3 text-left transition-colors",
+                active
+                  ? "border-primary bg-primary/10"
+                  : "border-border bg-background/40 hover:border-primary/50",
+              )}
+            >
+              <span className="flex shrink-0 overflow-hidden rounded-[2px] border border-border">
+                {option.swatch.map((color) => (
+                  <span
+                    key={color}
+                    className="block size-6"
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-1.5 text-[12px] font-medium text-foreground">
+                  {option.label}
+                  {active ? <Check className="size-3.5 text-primary" /> : null}
+                </span>
+                <span className="mt-0.5 block text-[10px] text-muted-foreground">
+                  {option.hint}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <p className="mt-3 flex items-center gap-1.5 border-t border-border pt-3 text-[11px] text-muted-foreground">
+        <Palette className="size-3.5 shrink-0" />
+        Tema yalnızca renk paletini değiştirir; düzen ve içerik aynı kalır.
+      </p>
+    </Panel>
   );
 }
 

@@ -27,15 +27,20 @@ import {
   MAX_DISPLAY_NAME,
   MAX_FAVORITES,
   MAX_TAGLINE,
+  PROFILE_SECTIONS,
   USERNAME_MAX,
   communityRoleLabel,
+  communityRoleTone,
+  hiddenSectionLabels,
   initialsFor,
+  isSectionHidden,
   normalizeUsername,
   usernameCooldownDaysLeft,
   usernameError,
   type CharacterPick,
   type CommentView,
   type ProfileResult,
+  type ProfileSectionId,
   type ProfileView,
   type WatchEntryView,
 } from "@/convex/communityView";
@@ -47,6 +52,7 @@ import { formatDateTime, formatRelative, genreLabel } from "@/lib/anime-labels";
 import { cn } from "@/lib/utils";
 import { useAction, useMutation, useQuery } from "convex/react";
 import {
+  Activity,
   CalendarDays,
   Clock,
   ImagePlus,
@@ -104,9 +110,19 @@ export default function Profile() {
     result.favorites.find((card) => card.anilistId === profile.bannerAnilistId) ??
     result.favorites[0];
 
+  // Sections the member hid disappear for visitors; the owner always sees their
+  // own profile in full and is told what other people can no longer see.
+  const hiddenFromVisitors = (id: ProfileSectionId) =>
+    !profile.isMe && isSectionHidden(profile.hiddenSections, id);
+
   return (
     <SiteShell>
-      <ProfileHeader profile={profile} banner={banner} stats={result.stats} />
+      <ProfileHeader
+        profile={profile}
+        banner={banner}
+        stats={result.stats}
+        showStats={!hiddenFromVisitors("stats")}
+      />
 
       <Container className="space-y-6 py-6">
         {result.restricted ? (
@@ -126,6 +142,11 @@ export default function Profile() {
           </Panel>
         ) : (
           <>
+            {hiddenFromVisitors("activity") ? null : (
+              <ActivityPanel userId={profile.userId} />
+            )}
+
+            {hiddenFromVisitors("favorites") ? null : (
             <Panel
               title={`Favori animeler (${profile.favoriteAnimeIds.length}/${MAX_FAVORITES})`}
               action={
@@ -150,8 +171,10 @@ export default function Profile() {
                 </p>
               )}
             </Panel>
+            )}
 
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+              {hiddenFromVisitors("history") ? null : (
               <Panel
                 title={`Son izlenenler (${result.stats.episodes} bölüm)`}
                 bodyClassName="p-0"
@@ -173,6 +196,7 @@ export default function Profile() {
                   </p>
                 )}
               </Panel>
+              )}
 
               <div className="space-y-4">
                 <Panel title="Hakkında">
@@ -226,6 +250,7 @@ export default function Profile() {
 
                 <ProfileCharacterPanel profile={profile} />
 
+                {hiddenFromVisitors("comments") ? null : (
                 <Panel
                   title="Son yorumlar"
                   action={
@@ -246,6 +271,7 @@ export default function Profile() {
                     </p>
                   )}
                 </Panel>
+                )}
               </div>
             </div>
           </>
@@ -263,11 +289,15 @@ function ProfileHeader({
   profile,
   banner,
   stats,
+  showStats,
 }: {
   profile: ProfileView;
   banner?: ProfileResult["favorites"][number];
   stats: ProfileResult["stats"];
+  /** False when the member hid the statistic strip from visitors. */
+  showStats: boolean;
 }) {
+  const hiddenLabels = hiddenSectionLabels(profile.hiddenSections);
   // A gallery upload wins over the auto banner taken from a favourite anime.
   const hero = profile.bannerUrl ?? banner?.banner ?? banner?.cover;
 
@@ -295,7 +325,12 @@ function ProfileHeader({
             <h1 className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[20px] font-bold text-foreground sm:text-[26px]">
               {profile.displayName}
               {communityRoleLabel(profile.role) ? (
-                <span className="rounded-[2px] bg-primary/15 px-1.5 py-0.5 text-[11px] font-medium text-primary">
+                <span
+                  className={cn(
+                    "rounded-[2px] px-1.5 py-0.5 text-[11px] font-medium",
+                    communityRoleTone(profile.role),
+                  )}
+                >
                   {communityRoleLabel(profile.role)}
                 </span>
               ) : null}
@@ -306,28 +341,43 @@ function ProfileHeader({
                 </span>
               ) : null}
             </h1>
-            <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[12px] text-muted-foreground">
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-muted-foreground">
               {profile.handle ? <span>@{profile.handle}</span> : null}
               <span className="inline-flex items-center gap-1">
                 <CalendarDays className="size-3" />
-                {formatRelative(profile.joinedAt)}
+                {formatRelative(profile.joinedAt)} katıldı
               </span>
+              {profile.lastSeenAt ? (
+                <span className="inline-flex items-center gap-1">
+                  <Activity className="size-3" />
+                  Son aktiflik {formatRelative(profile.lastSeenAt)}
+                </span>
+              ) : null}
               {profile.isAnonymous ? <span>Misafir oturumu</span> : null}
             </p>
+            {profile.isMe && hiddenLabels.length > 0 ? (
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Ziyaretçilerden gizli: {hiddenLabels.join(", ")}
+              </p>
+            ) : null}
           </div>
 
           {profile.isMe ? <ProfileEditor profile={profile} /> : null}
         </div>
 
-        <StatStrip
-          className="mb-5"
-          stats={[
-            { label: "İzlenen anime", value: stats.titles, tone: "text-primary" },
-            { label: "İzlenen bölüm", value: stats.episodes },
-            { label: "Favori", value: stats.favorites },
-            { label: "Yorum", value: stats.comments },
-          ]}
-        />
+        {showStats ? (
+          <StatStrip
+            className="mb-5"
+            stats={[
+              { label: "İzlenen anime", value: stats.titles, tone: "text-primary" },
+              { label: "İzlenen bölüm", value: stats.episodes },
+              { label: "Favori", value: stats.favorites },
+              { label: "Yorum", value: stats.comments },
+            ]}
+          />
+        ) : (
+          <div className="mb-5" />
+        )}
       </Container>
     </section>
   );
@@ -372,6 +422,84 @@ function ProfilePortrait({ profile }: { profile: ProfileView }) {
     >
       {initialsFor(profile.displayName)}
     </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Activity
+// ---------------------------------------------------------------------------
+
+/**
+ * Fourteen days of real activity — comments written and episodes recorded —
+ * drawn as a sparkline, with the last-seen stamp underneath. The query returns
+ * null when the member hid the section, so nothing is drawn at all then.
+ */
+function ActivityPanel({ userId }: { userId: string }) {
+  const activity = useQuery(api.profiles.activity, { userId });
+
+  if (activity === undefined || activity === null) return null;
+
+  const max = Math.max(1, ...activity.days.map((day) => day.count));
+  const total = activity.days.reduce((sum, day) => sum + day.count, 0);
+
+  return (
+    <Panel
+      title="Aktiflik"
+      action={
+        <span className="text-[10px] text-muted-foreground">Son 14 gün</span>
+      }
+    >
+      <div className="flex h-[76px] items-end gap-1 sm:gap-1.5">
+        {activity.days.map((day) => (
+          <div
+            key={day.start}
+            className="flex min-w-0 flex-1 flex-col items-center gap-1"
+            title={`${day.label} · ${day.count} hareket`}
+          >
+            <span className="flex w-full flex-1 items-end">
+              <span
+                className={cn(
+                  "w-full rounded-[2px] transition-[height] duration-300",
+                  day.count > 0 ? "bg-primary" : "bg-border",
+                )}
+                style={{
+                  height:
+                    day.count === 0
+                      ? 3
+                      : Math.max(6, Math.round((day.count / max) * 56)),
+                }}
+              />
+            </span>
+            <span className="text-[9px] text-muted-foreground">
+              {day.label.slice(0, 1)}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-3 border-t border-border pt-3 sm:grid-cols-4">
+        <Metric label="Hareket" value={total} />
+        <Metric label="Yorum" value={activity.comments} />
+        <Metric label="Bölüm" value={activity.episodes} />
+        <Metric label="Seri" value={`${activity.streak} gün`} />
+      </div>
+
+      <p className="mt-2.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+        <Clock className="size-3 shrink-0" />
+        {activity.lastSeenAt
+          ? `Son aktiflik ${formatRelative(activity.lastSeenAt)}`
+          : "Son aktiflik bilgisi yok"}
+      </p>
+    </Panel>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div>
+      <p className="stat-label">{label}</p>
+      <p className="mt-0.5 text-[14px] font-semibold text-foreground">{value}</p>
+    </div>
   );
 }
 
@@ -481,6 +609,7 @@ function ProfileEditor({ profile }: { profile: ProfileView }) {
   const [website, setWebsite] = useState(profile.website ?? "");
   const [favoriteGenre, setFavoriteGenre] = useState(profile.favoriteGenre ?? "");
   const [isPublic, setIsPublic] = useState(profile.isPublic);
+  const [hidden, setHidden] = useState<string[]>(profile.hiddenSections ?? []);
 
   const search = useRemoteSearch(term, 2);
   const me = useQuery(api.profiles.me);
@@ -498,6 +627,7 @@ function ProfileEditor({ profile }: { profile: ProfileView }) {
     setWebsite(profile.website ?? "");
     setFavoriteGenre(profile.favoriteGenre ?? "");
     setIsPublic(profile.isPublic);
+    setHidden(profile.hiddenSections ?? []);
   }, [open]);
 
   const save = async (event: FormEvent<HTMLFormElement>) => {
@@ -512,6 +642,7 @@ function ProfileEditor({ profile }: { profile: ProfileView }) {
         website,
         favoriteGenre,
         isPublic,
+        hiddenSections: hidden,
       });
       toast.success("Profilin güncellendi.");
       setOpen(false);
@@ -738,6 +869,53 @@ function ProfileEditor({ profile }: { profile: ProfileView }) {
                 ) : null}
               </ul>
             ) : null}
+          </div>
+
+          {/* ------------------------------------------------------- privacy */}
+          <div className="border-t border-border pt-4">
+            <p className="stat-label">Profilde gizle</p>
+            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+              Ziyaretçilerin görmesini istemediğin bölümleri kapatabilirsin.
+              Kendi profilinde her şeyi görmeye devam edersin.
+            </p>
+
+            <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
+              {PROFILE_SECTIONS.map((section) => {
+                const active = hidden.includes(section.id);
+                return (
+                  <label
+                    key={section.id}
+                    className={cn(
+                      "flex cursor-pointer items-start gap-2 rounded-[3px] border p-2 transition-colors",
+                      active
+                        ? "border-primary/60 bg-primary/10"
+                        : "border-border bg-background/40 hover:border-primary/40",
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={active}
+                      onChange={() =>
+                        setHidden((current) =>
+                          current.includes(section.id)
+                            ? current.filter((id) => id !== section.id)
+                            : [...current, section.id],
+                        )
+                      }
+                      className="mt-0.5 size-3.5 accent-primary"
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-[11px] font-medium text-foreground">
+                        {section.label}
+                      </span>
+                      <span className="block text-[10px] leading-relaxed text-muted-foreground">
+                        {section.hint}
+                      </span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
           </div>
 
           <DialogFooter>

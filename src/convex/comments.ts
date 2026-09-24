@@ -14,7 +14,7 @@ import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query, type QueryCtx } from "./_generated/server";
-import { currentUser, isAdmin, requireMember, requireUser } from "./access";
+import { canModerate, currentUser, requireMember, requireUser } from "./access";
 import {
   COMMENT_COOLDOWN_MS,
   COMMENT_MAX_LENGTH,
@@ -34,7 +34,7 @@ import { ensureProfile } from "./profileStore";
 
 type CommentRow = Doc<"comments">;
 
-type Viewer = { userId: Id<"users"> | null; admin: boolean };
+type Viewer = { userId: Id<"users"> | null; staff: boolean };
 
 export function normalizeBody(raw: string) {
   return raw
@@ -131,7 +131,7 @@ export async function decorateComments(
         likeCount: row.likeCount,
         likedByMe,
         mine: viewer.userId === row.userId,
-        canDelete: !row.deletedAt && (viewer.admin || viewer.userId === row.userId),
+        canDelete: !row.deletedAt && (viewer.staff || viewer.userId === row.userId),
         deleted: Boolean(row.deletedAt),
         deletedByAdmin: Boolean(row.deletedAt && row.deletedByAdmin),
         createdAt: row.createdAt,
@@ -146,7 +146,7 @@ export async function decorateComments(
 
 async function viewerOf(ctx: QueryCtx): Promise<Viewer> {
   const user = await currentUser(ctx);
-  return { userId: user?._id ?? null, admin: isAdmin(user) };
+  return { userId: user?._id ?? null, staff: canModerate(user) };
 }
 
 // ---------------------------------------------------------------------------
@@ -392,7 +392,7 @@ export const add = mutation({
   },
 });
 
-/** Author or admin. Clears the body and keeps the thread readable. */
+/** Author, admin or moderator. Clears the body, keeps the thread readable. */
 export const remove = mutation({
   args: { id: v.id("comments") },
   handler: async (ctx, args) => {
@@ -403,8 +403,8 @@ export const remove = mutation({
     if (!row) return;
     if (row.deletedAt) return;
 
-    const admin = isAdmin(user);
-    if (!admin && row.userId !== user._id) {
+    const staff = canModerate(user);
+    if (!staff && row.userId !== user._id) {
       throw new Error("Yalnızca kendi yorumunu silebilirsin.");
     }
 
@@ -414,7 +414,7 @@ export const remove = mutation({
       spoiler: false,
       deletedAt: now,
       updatedAt: now,
-      deletedByAdmin: admin && row.userId !== user._id ? true : undefined,
+      deletedByAdmin: staff && row.userId !== user._id ? true : undefined,
       likeCount: 0,
     });
 

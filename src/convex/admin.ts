@@ -11,8 +11,13 @@ import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import { currentUser, isAdmin, requireAdmin } from "./access";
-import type { CommentView, MemberCardView } from "./communityView";
+import {
+  resolveDisplayName,
+  type CommentView,
+  type MemberCardView,
+} from "./communityView";
 import { decorateComments } from "./comments";
+import { findProfileRow } from "./profileStore";
 import { memberCardsFor } from "./profiles";
 import { refreshWatchCounters } from "./progress";
 
@@ -43,6 +48,7 @@ export const overview = query({
       members: users.filter((row) => !row.isAnonymous).length,
       guests: users.filter((row) => row.isAnonymous).length,
       admins: users.filter((row) => row.role === "admin").length,
+      moderators: users.filter((row) => row.role === "moderator").length,
       banned: users.filter((row) => Boolean(row.bannedAt)).length,
       comments: live.length,
       commentsThisWeek: live.filter((row) => row.createdAt >= weekAgo).length,
@@ -93,7 +99,7 @@ export const recentComments = query({
       .take(RECENT_COMMENT_LIMIT);
 
     const [comments, animeRows] = await Promise.all([
-      decorateComments(ctx, rows, { userId: user._id, admin: true }),
+      decorateComments(ctx, rows, { userId: user._id, staff: true }),
       Promise.all(
         Array.from(new Set(rows.map((row) => row.anilistId))).map((anilistId) =>
           ctx.db
@@ -156,9 +162,56 @@ export const unban = mutation({
   },
 });
 
-/** Promotes or demotes a member. */
+/** Everyone currently suspended, newest first, with who did it and why. */
+export const bannedMembers = query({
+  args: {},
+  handler: async (ctx): Promise<MemberCardView[]> => {
+    const user = await currentUser(ctx);
+    if (!isAdmin(user)) return [];
+
+    const users = await ctx.db.query("users").take(USER_SCAN_LIMIT);
+    const banned = users.filter((row) => Boolean(row.bannedAt));
+    const cards = await memberCardsFor(ctx, banned);
+
+    // Resolve the moderator name once per account that issued a suspension.
+    const byAdmin = new Map<string, string>();
+    for (const row of banned) {
+      if (!row.bannedBy) continue;
+      const key = row.bannedBy as string;
+      if (byAdmin.has(key)) continue;
+      const moderator = await ctx.db.get(row.bannedBy);
+      if (!moderator) continue;
+      byAdmin.set(
+        key,
+        resolveDisplayName(moderator, await findProfileRow(ctx, moderator._id)),
+      );
+    }
+
+    const order = new Map<string, number>();
+    for (const row of banned) order.set(row._id, row.bannedAt ?? 0);
+
+    return cards
+      .map((card) => {
+        const source = banned.find((row) => row._id === card.userId);
+        const name = source?.bannedBy ? byAdmin.get(source.bannedBy as string) : undefined;
+        return name ? { ...card, bannedByName: name } : card;
+      })
+      .sort((a, b) => (order.get(b.userId) ?? 0) - (order.get(a.userId) ?? 0));
+  },
+});
+
+/** Promotes, demotes or re-labels a member with any of the site's roles. */
 export const setRole = mutation({
-  args: { userId: v.id("users"), role: v.union(v.literal("admin"), v.literal("member")) },
+  args: {
+    userId: v.id("users"),
+    role: v.union(
+      v.literal("admin"),
+      v.literal("moderator"),
+      v.literal("editor"),
+      v.literal("member"),
+      v.literal("newcomer"),
+    ),
+  },
   handler: async (ctx, args) => {
     const admin = await requireAdmin(ctx);
     if (args.userId === admin._id) {

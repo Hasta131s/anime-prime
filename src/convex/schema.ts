@@ -5,14 +5,20 @@ import { Infer, v } from "convex/values";
 // default user roles. can add / remove based on the project as needed
 export const ROLES = {
   ADMIN: "admin",
+  MODERATOR: "moderator",
+  EDITOR: "editor",
   USER: "user",
   MEMBER: "member",
+  NEWCOMER: "newcomer",
 } as const;
 
 export const roleValidator = v.union(
   v.literal(ROLES.ADMIN),
+  v.literal(ROLES.MODERATOR),
+  v.literal(ROLES.EDITOR),
   v.literal(ROLES.USER),
   v.literal(ROLES.MEMBER),
+  v.literal(ROLES.NEWCOMER),
 );
 export type Role = Infer<typeof roleValidator>;
 
@@ -274,6 +280,12 @@ const schema = defineSchema(
       /** AniList id of the anime the character belongs to (for the link). */
       characterMediaAnilistId: v.optional(v.number()),
 
+      /**
+       * Profile sections the member chose to keep private. Ids come from
+       * `PROFILE_SECTIONS`; anything listed is simply not rendered for others.
+       */
+      hiddenSections: v.optional(v.array(v.string())),
+
       isPublic: v.boolean(),
       commentCount: v.number(),
       /** Distinct titles with at least one recorded episode. */
@@ -287,6 +299,19 @@ const schema = defineSchema(
       // Uniqueness is enforced in `setUsername`, which checks this index inside
       // the same transaction before writing.
       .index("by_username", ["username"]),
+
+    /**
+     * Site-wide settings — a single row keyed `"site"`.
+     * Right now it only holds the admin-selected colour palette, which every
+     * visitor reads and applies on load.
+     */
+    settings: defineTable({
+      key: v.string(),
+      /** Palette id from `SITE_PALETTES`. */
+      palette: v.string(),
+      updatedAt: v.number(),
+      updatedBy: v.optional(v.id("users")),
+    }).index("by_key", ["key"]),
 
     /** "En son izlenenler" — one row per episode a signed-in user watched. */
     watchHistory: defineTable({

@@ -143,6 +143,265 @@
   --sidebar-ring: rgba(61, 180, 242, 0.5);
 }
 
+/*
+ * Admin-selectable palettes.
+ *
+ * Every palette only re-declares the same tokens the default theme sets, so a
+ * switch in the admin panel recolours the whole site without touching markup.
+ * `html[data-theme="…"]` outranks `.dark`, which is why the attribute wins.
+ */
+html[data-theme="sakura"] {
+  color-scheme: dark;
+  --background: #170d13;
+  --foreground: #f6eef2;
+  --card: #22141c;
+  --card-foreground: #f6eef2;
+  --popover: #22141c;
+  --popover-foreground: #f6eef2;
+  --primary: #ef6ea3;
+  --primary-foreground: #1a0d13;
+  --secondary: #2a1a23;
+  --secondary-foreground: #f6eef2;
+  --muted: #2a1a23;
+  --muted-foreground: #c3a7b4;
+  --accent: #2f1d27;
+  --accent-foreground: #f6eef2;
+  --destructive: #f2566d;
+  --border: #331f2a;
+  --input: #3d2833;
+  --ring: rgba(239, 110, 163, 0.5);
+  --brand: #ef6ea3;
+  --brand-strong: #d9558c;
+  --brand-bright: #f792bb;
+  --brand-live: #7bd555;
+  --brand-score: #e5a04b;
+  --surface-1: #22141c;
+  --surface-2: #2a1a23;
+  --chart-1: #ef6ea3;
+  --chart-2: #7bd555;
+  --chart-3: #e5a04b;
+  --chart-4: #f2566d;
+  --chart-5: #c3a7b4;
+  --sidebar: #22141c;
+  --sidebar-foreground: #f6eef2;
+  --sidebar-primary: #ef6ea3;
+  --sidebar-primary-foreground: #1a0d13;
+  --sidebar-accent: #2f1d27;
+  --sidebar-accent-foreground: #f6eef2;
+  --sidebar-border: #331f2a;
+  --sidebar-ring: rgba(239, 110, 163, 0.5);
+}
+
+html[data-theme="emerald"] {
+  color-scheme: dark;
+  --background: #07160f;
+  --foreground: #e9f5ee;
+  --card: #0f2119;
+  --card-foreground: #e9f5ee;
+  --popover: #0f2119;
+  --popover-foreground: #e9f5ee;
+  --primary: #37d67a;
+  --primary-foreground: #04160c;
+  --secondary: #14271e;
+  --secondary-foreground: #e9f5ee;
+  --muted: #14271e;
+  --muted-foreground: #9dbdae;
+  --accent: #173024;
+  --accent-foreground: #e9f5ee;
+  --destructive: #e85d75;
+  --border: #183125;
+  --input: #21402f;
+  --ring: rgba(55, 214, 122, 0.5);
+  --brand: #37d67a;
+  --brand-strong: #2bb865;
+  --brand-bright: #62e29a;
+  --brand-live: #a8e063;
+  --brand-score: #e5a04b;
+  --surface-1: #0f2119;
+  --surface-2: #14271e;
+  --chart-1: #37d67a;
+  --chart-2: #a8e063;
+  --chart-3: #e5a04b;
+  --chart-4: #e85d75;
+  --chart-5: #9dbdae;
+  --sidebar: #0f2119;
+  --sidebar-foreground: #e9f5ee;
+  --sidebar-primary: #37d67a;
+  --sidebar-primary-foreground: #04160c;
+  --sidebar-accent: #173024;
+  --sidebar-accent-foreground: #e9f5ee;
+  --sidebar-border: #183125;
+  --sidebar-ring: rgba(55, 214, 122, 0.5);
+}
+
+html[data-theme="amber"] {
+  color-scheme: dark;
+  --background: #171005;
+  --foreground: #f7f0e4;
+  --card: #221809;
+  --card-foreground: #f7f0e4;
+  --popover: #221809;
+  --popover-foreground: #f7f0e4;
+  --primary: #f2a03d;
+  --primary-foreground: #1c1204;
+  --secondary: #2a1f0d;
+  --secondary-foreground: #f7f0e4;
+  --muted: #2a1f0d;
+  --muted-foreground: #c9b28c;
+  --accent: #31230f;
+  --accent-foreground: #f7f0e4;
+  --destructive: #e85d75;
+  --border: #332510;
+  --input: #42311a;
+  --ring: rgba(242, 160, 61, 0.5);
+  --brand: #f2a03d;
+  --brand-strong: #d98726;
+  --brand-bright: #f7bb6d;
+  --brand-live: #9ed36a;
+  --brand-score: #e5a04b;
+  --surface-1: #221809;
+  --surface-2: #2a1f0d;
+  --chart-1: #f2a03d;
+  --chart-2: #9ed36a;
+  --chart-3: #e5a04b;
+  --chart-4: #e85d75;
+  --chart-5: #c9b28c;
+  --sidebar: #221809;
+  --sidebar-foreground: #f7f0e4;
+  --sidebar-primary: #f2a03d;
+  --sidebar-primary-foreground: #1c1204;
+  --sidebar-accent: #31230f;
+  --sidebar-accent-foreground: #f7f0e4;
+  --sidebar-border: #332510;
+  --sidebar-ring: rgba(242, 160, 61, 0.5);
+}
+
+html[data-theme="violet"] {
+  color-scheme: dark;
+  --background: #0f0c1e;
+  --foreground: #efebfb;
+  --card: #171232;
+  --card-foreground: #efebfb;
+  --popover: #171232;
+  --popover-foreground: #efebfb;
+  --primary: #a17bf7;
+  --primary-foreground: #0d0a1a;
+  --secondary: #1d1740;
+  --secondary-foreground: #efebfb;
+  --muted: #1d1740;
+  --muted-foreground: #b3a8d6;
+  --accent: #241c4d;
+  --accent-foreground: #efebfb;
+  --destructive: #f2566d;
+  --border: #241c4d;
+  --input: #2f2560;
+  --ring: rgba(161, 123, 247, 0.5);
+  --brand: #a17bf7;
+  --brand-strong: #8a63e8;
+  --brand-bright: #bda1fa;
+  --brand-live: #7bd555;
+  --brand-score: #e5a04b;
+  --surface-1: #171232;
+  --surface-2: #1d1740;
+  --chart-1: #a17bf7;
+  --chart-2: #7bd555;
+  --chart-3: #e5a04b;
+  --chart-4: #f2566d;
+  --chart-5: #b3a8d6;
+  --sidebar: #171232;
+  --sidebar-foreground: #efebfb;
+  --sidebar-primary: #a17bf7;
+  --sidebar-primary-foreground: #0d0a1a;
+  --sidebar-accent: #241c4d;
+  --sidebar-accent-foreground: #efebfb;
+  --sidebar-border: #241c4d;
+  --sidebar-ring: rgba(161, 123, 247, 0.5);
+}
+
+html[data-theme="crimson"] {
+  color-scheme: dark;
+  --background: #150a0c;
+  --foreground: #f7e9eb;
+  --card: #1f1114;
+  --card-foreground: #f7e9eb;
+  --popover: #1f1114;
+  --popover-foreground: #f7e9eb;
+  --primary: #f2566d;
+  --primary-foreground: #1a0a0d;
+  --secondary: #27161a;
+  --secondary-foreground: #f7e9eb;
+  --muted: #27161a;
+  --muted-foreground: #c9a3a9;
+  --accent: #2d191e;
+  --accent-foreground: #f7e9eb;
+  --destructive: #f2566d;
+  --border: #2d191e;
+  --input: #3b2229;
+  --ring: rgba(242, 86, 109, 0.5);
+  --brand: #f2566d;
+  --brand-strong: #dd3d55;
+  --brand-bright: #f78093;
+  --brand-live: #7bd555;
+  --brand-score: #e5a04b;
+  --surface-1: #1f1114;
+  --surface-2: #27161a;
+  --chart-1: #f2566d;
+  --chart-2: #7bd555;
+  --chart-3: #e5a04b;
+  --chart-4: #f78093;
+  --chart-5: #c9a3a9;
+  --sidebar: #1f1114;
+  --sidebar-foreground: #f7e9eb;
+  --sidebar-primary: #f2566d;
+  --sidebar-primary-foreground: #1a0a0d;
+  --sidebar-accent: #2d191e;
+  --sidebar-accent-foreground: #f7e9eb;
+  --sidebar-border: #2d191e;
+  --sidebar-ring: rgba(242, 86, 109, 0.5);
+}
+
+html[data-theme="frost"] {
+  color-scheme: light;
+  --background: #eef2f8;
+  --foreground: #101828;
+  --card: #ffffff;
+  --card-foreground: #101828;
+  --popover: #ffffff;
+  --popover-foreground: #101828;
+  --primary: #2f7fd6;
+  --primary-foreground: #ffffff;
+  --secondary: #e2e8f2;
+  --secondary-foreground: #101828;
+  --muted: #e6ebf3;
+  --muted-foreground: #56637a;
+  --accent: #dfe6f1;
+  --accent-foreground: #101828;
+  --destructive: #d92b45;
+  --border: #d3dbe8;
+  --input: #c3cede;
+  --ring: rgba(47, 127, 214, 0.45);
+  --brand: #2f7fd6;
+  --brand-strong: #2569b6;
+  --brand-bright: #4d97e0;
+  --brand-live: #1f9d57;
+  --brand-score: #c9761d;
+  --surface-1: #ffffff;
+  --surface-2: #eef2f8;
+  --chart-1: #2f7fd6;
+  --chart-2: #1f9d57;
+  --chart-3: #c9761d;
+  --chart-4: #d92b45;
+  --chart-5: #56637a;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #101828;
+  --sidebar-primary: #2f7fd6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #dfe6f1;
+  --sidebar-accent-foreground: #101828;
+  --sidebar-border: #d3dbe8;
+  --sidebar-ring: rgba(47, 127, 214, 0.45);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -214,7 +473,7 @@
   align-items: center;
   gap: 0.375rem;
   border-radius: 3px;
-  background-color: #1a2430;
+  background-color: var(--secondary);
   padding: 0.125rem 0.5rem;
   font-size: 0.6875rem;
   font-weight: 500;
