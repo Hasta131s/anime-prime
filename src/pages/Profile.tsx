@@ -281,7 +281,7 @@ function ProfileHeader({
       </div>
 
       <Container>
-        <div className="-mt-[96px] flex flex-col gap-4 pb-5 sm:-mt-[132px] sm:flex-row sm:items-end sm:gap-6">
+        <div className="-mt-[72px] flex flex-col gap-4 pb-5 sm:-mt-[92px] sm:flex-row sm:items-end sm:gap-6">
           <ProfilePortrait profile={profile} />
 
           <div className="min-w-0 flex-1 sm:pb-1">
@@ -327,20 +327,21 @@ function ProfileHeader({
 }
 
 /**
- * Portrait-shaped identity block. A character portrait keeps its 3:4 framing so
- * the header reads as a profile instead of a wide strip.
+ * Square identity block. Character art is natively 3:4, so it is cropped from
+ * the top into a square frame — the face stays visible and the avatar reads as
+ * a profile picture instead of a tall strip.
  */
 function ProfilePortrait({ profile }: { profile: ProfileView }) {
   const portrait = profile.characterImage ?? profile.image;
   const frame =
-    "w-[128px] shrink-0 overflow-hidden rounded-[3px] border-2 border-background shadow-xl shadow-black/40 sm:w-[164px]";
+    "size-[118px] shrink-0 overflow-hidden rounded-[3px] border-2 border-background shadow-xl shadow-black/40 sm:size-[152px]";
 
   if (portrait) {
     return (
       <img
         src={portrait}
         alt={profile.characterName ?? ""}
-        className={cn(frame, "aspect-[3/4] object-cover object-top")}
+        className={cn(frame, "object-cover object-top")}
       />
     );
   }
@@ -350,7 +351,7 @@ function ProfilePortrait({ profile }: { profile: ProfileView }) {
       aria-hidden="true"
       className={cn(
         frame,
-        "flex aspect-[3/4] items-center justify-center bg-secondary text-[34px] font-bold text-muted-foreground sm:text-[44px]",
+        "flex items-center justify-center bg-secondary text-[34px] font-bold text-muted-foreground sm:text-[44px]",
       )}
     >
       {initialsFor(profile.displayName)}
