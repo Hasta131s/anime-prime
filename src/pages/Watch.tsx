@@ -125,7 +125,7 @@ export default function Watch() {
         <Container className="py-24 text-center">
           <h1 className="text-[20px] font-semibold">Geçersiz bağlantı</h1>
           <p className="mt-2 text-[13px] text-muted-foreground">
-            Bu adres bir AniList kaydına karşılık gelmiyor.
+            Bu adres bir katalog kaydına karşılık gelmiyor.
           </p>
         </Container>
       </SiteShell>
@@ -309,7 +309,7 @@ export default function Watch() {
                 anime.episodes >
                   episodes.filter(([episode]) => episode > 0).length ? (
                   <p className="mt-3 border-t border-border pt-2.5 text-[10px] leading-relaxed text-muted-foreground">
-                    AniList bu yapım için {anime.episodes} bölüm bildiriyor;{" "}
+                    Katalog bu yapım için {anime.episodes} bölüm bildiriyor;{" "}
                     {episodes.filter(([episode]) => episode > 0).length} bölümün
                     kaynağı eklenmiş.
                   </p>

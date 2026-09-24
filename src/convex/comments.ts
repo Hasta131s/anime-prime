@@ -92,7 +92,7 @@ async function authorFor(
   else if (profile?.characterImage) author.image = profile.characterImage;
   else if (user?.image) author.image = user.image;
   if (user?.role) author.role = user.role;
-  const handle = handleFromEmail(user?.email);
+  const handle = profile?.username ?? handleFromEmail(user?.email);
   if (handle) author.handle = handle;
 
   cache.set(userId, author);

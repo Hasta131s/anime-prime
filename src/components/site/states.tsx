@@ -60,7 +60,7 @@ export function ErrorCard({
           <p className="text-sm font-semibold text-foreground">{title}</p>
           <p className="mt-1 max-w-xl text-xs leading-relaxed text-muted-foreground">
             {message ??
-              "AniList verisine ulaşılamadı. Bağlantını kontrol edip yeniden deneyebilirsin."}
+              "Katalog verisine ulaşılamadı. Bağlantını kontrol edip yeniden deneyebilirsin."}
           </p>
         </div>
       </div>

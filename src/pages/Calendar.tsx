@@ -68,8 +68,7 @@ export default function Calendar() {
             Yayın takvimi
           </h1>
           <p className="mt-1 text-[12px] text-muted-foreground">
-            AniList&apos;in bildirdiği gerçek yayın saatleriyle yedi günlük
-            program.{" "}
+            Gerçek yayın saatleriyle yedi günlük program.{" "}
             {result?.status === "syncing" ? (
               <span className="inline-flex items-center gap-1.5 text-brand-live">
                 <Loader2 className="size-3 animate-spin" />
@@ -128,7 +127,7 @@ export default function Calendar() {
           <EmptyCard
             className="mt-6"
             title="Bu hafta için kayıt yok"
-            description="AniList bu aralıkta yayınlanan bir bölüm bildirmiyor. Sonraki haftaya geçmeyi dene."
+            description="Bu aralıkta yayınlanan bir bölüm yok. Sonraki haftaya geçmeyi dene."
           >
             <Button
               variant="outline"
@@ -195,7 +194,7 @@ export default function Calendar() {
 }
 
 function SlotRow({ slot, now }: { slot: CalendarSlotView; now: number }) {
-  const title = slot.anime?.title ?? `AniList #${slot.anilistId}`;
+  const title = slot.anime?.title ?? `Yapım #${slot.anilistId}`;
   const aired = slot.airingAt <= now;
 
   return (

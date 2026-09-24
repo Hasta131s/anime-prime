@@ -27,8 +27,12 @@ import {
   MAX_DISPLAY_NAME,
   MAX_FAVORITES,
   MAX_TAGLINE,
+  USERNAME_MAX,
   communityRoleLabel,
   initialsFor,
+  normalizeUsername,
+  usernameCooldownDaysLeft,
+  usernameError,
   type CharacterPick,
   type CommentView,
   type ProfileResult,
@@ -545,6 +549,8 @@ function ProfileEditor({ profile }: { profile: ProfileView }) {
         </DialogHeader>
 
         <form onSubmit={save} className="space-y-4">
+          <UsernameField profile={profile} />
+
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Görünen ad">
               <Input
@@ -688,7 +694,7 @@ function ProfileEditor({ profile }: { profile: ProfileView }) {
             {search.isSearching ? (
               <p className="mt-2 flex items-center gap-2 text-[11px] text-muted-foreground">
                 <Loader2 className="size-3 animate-spin" />
-                AniList kataloğunda aranıyor…
+                Katalogda aranıyor…
               </p>
             ) : null}
 
@@ -746,6 +752,107 @@ function ProfileEditor({ profile }: { profile: ProfileView }) {
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/**
+ * The member's own @username.
+ *
+ * Availability is checked live against the server so the member sees "alınmış"
+ * before they try to save, and a rename is only allowed once every two weeks —
+ * the very first claim is always free.
+ */
+function UsernameField({ profile }: { profile: ProfileView }) {
+  const setUsername = useMutation(api.profiles.setUsername);
+
+  const [value, setValue] = useState(profile.username ?? "");
+  const [busy, setBusy] = useState(false);
+
+  // Keep the input in sync when the profile row changes elsewhere.
+  useEffect(() => {
+    setValue(profile.username ?? "");
+  }, [profile.username]);
+
+  const current = profile.username ?? "";
+  const normalized = normalizeUsername(value);
+  const changed = normalized !== current;
+  const daysLeft = profile.usernameChangeAt
+    ? usernameCooldownDaysLeft(profile.usernameChangeAt)
+    : 0;
+  const locked = Boolean(current) && daysLeft > 0;
+
+  const check = useQuery(
+    api.profiles.usernameAvailable,
+    changed && normalized.length > 0 ? { username: normalized } : "skip",
+  );
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      const saved = await setUsername({ username: normalized });
+      toast.success(`Kullanıcı adın @${saved} olarak kaydedildi.`);
+      setValue(saved);
+    } catch (cause) {
+      toast.error(
+        cause instanceof Error ? cause.message : "Kullanıcı adı kaydedilemedi.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const hint = !changed
+    ? current
+      ? locked
+        ? `Kullanıcı adını 2 haftada bir değiştirebilirsin. ${daysLeft} gün sonra tekrar dene.`
+        : "Kullanıcı adını 2 haftada bir değiştirebilirsin."
+      : "Herkesin kendine ait bir kullanıcı adı var; ilk seçimin hemen geçerli olur."
+    : check === undefined
+      ? "Kullanılabilirlik kontrol ediliyor…"
+      : check === "ok"
+        ? "Bu kullanıcı adı uygun."
+        : check === "taken"
+          ? "Bu kullanıcı adı başkası tarafından kullanılıyor."
+          : check === "reserved"
+            ? "Bu kullanıcı adı siteye ayrılmış."
+            : (usernameError(normalized) ?? "Geçersiz kullanıcı adı.");
+
+  const tone =
+    changed && check === "ok"
+      ? "text-emerald-400"
+      : changed && (check === "taken" || check === "reserved" || check === "invalid")
+        ? "text-destructive"
+        : "text-muted-foreground";
+
+  return (
+    <div className="rounded-[3px] border border-border bg-background/40 p-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="flex min-w-0 flex-1 items-center rounded-[3px] border border-input bg-background/50 pl-2.5 focus-within:border-primary">
+          <span className="text-[13px] text-muted-foreground">@</span>
+          <input
+            value={value}
+            disabled={locked || busy}
+            maxLength={USERNAME_MAX}
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            onChange={(event) => setValue(event.target.value)}
+            placeholder="kullanici_adi"
+            className="min-w-0 flex-1 bg-transparent px-1.5 py-2 text-[13px] outline-none disabled:opacity-60"
+          />
+        </span>
+        <Button
+          type="button"
+          size="sm"
+          disabled={!changed || locked || busy || check !== "ok"}
+          onClick={() => void save()}
+        >
+          {busy ? <Loader2 className="size-3.5 animate-spin" /> : null}
+          {current ? "Değiştir" : "Al"}
+        </Button>
+      </div>
+      <p className={cn("mt-1.5 text-[11px] leading-relaxed", tone)}>{hint}</p>
+    </div>
   );
 }
 
@@ -1102,7 +1209,7 @@ function CharacterPicker() {
       {searching ? (
         <p className="mt-2 flex items-center gap-2 text-[11px] text-muted-foreground">
           <Loader2 className="size-3 animate-spin" />
-          AniList karakterleri aranıyor…
+          Karakterler aranıyor…
         </p>
       ) : null}
 

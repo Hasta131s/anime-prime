@@ -124,7 +124,7 @@ export default function Dashboard() {
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="line-clamp-1 text-[13px] font-medium text-foreground">
-                            {entry.anime?.title ?? `AniList #${entry.anilistId}`}
+                            {entry.anime?.title ?? `Yapım #${entry.anilistId}`}
                           </span>
                           <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] text-muted-foreground">
                             <span>

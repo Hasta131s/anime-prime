@@ -455,7 +455,7 @@ function CommentsTab() {
                     to={`/anime/${comment.anilistId}`}
                     className="text-primary hover:underline"
                   >
-                    {animeTitle ?? `AniList #${comment.anilistId}`}
+                    {animeTitle ?? `Yapım #${comment.anilistId}`}
                   </Link>
                 </p>
                 <p className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-foreground/90">

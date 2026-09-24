@@ -50,7 +50,7 @@ export default function AnimeDetail() {
       <SiteShell>
         <DetailMessage
           title="Geçersiz yapım bağlantısı"
-          description="Adres çubuğundaki bağlantı bir AniList kaydına karşılık gelmiyor."
+          description="Adres çubuğundaki bağlantı bir katalog kaydına karşılık gelmiyor."
         />
       </SiteShell>
     );
@@ -71,7 +71,7 @@ export default function AnimeDetail() {
           title="Bu yapım bulunamadı"
           description={
             message ??
-            "AniList kataloğunda bu kimliğe ait bir kayıt bulunamadı."
+            "Katalogda bu kimliğe ait bir kayıt bulunamadı."
           }
         />
       </SiteShell>
@@ -230,7 +230,7 @@ function DetailBody({
                     rel="noreferrer noopener"
                     className="text-[12px] font-medium text-primary hover:underline"
                   >
-                    AniList kaydı
+                    Katalog kaydı
                   </a>
                 ) : null}
               </div>
@@ -393,7 +393,7 @@ function DetailBody({
                 </ul>
               ) : (
                 <p className="text-[12px] leading-relaxed text-muted-foreground">
-                  AniList bu yapım için lisanslı bir platform bildirmiyor. Yeni bir
+                  Bu yapım için bildirilmiş lisanslı bir platform yok. Yeni bir
                   platform eklendiğinde burası otomatik güncellenir.
                 </p>
               )}
@@ -489,7 +489,7 @@ function DetailBody({
           <section>
             <SectionHeader
               title="Benzer animeler"
-              blurb="AniList kullanıcılarının birlikte önerdiği yapımlar."
+              blurb="İzleyicilerin birlikte önerdiği yapımlar."
               href="/anime"
             />
             <AnimeGrid

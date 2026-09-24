@@ -128,7 +128,7 @@ export default function Browse() {
           <p className="mt-1 text-[12px] text-muted-foreground">
             {isLoading
               ? "Katalog hazırlanıyor…"
-              : `${formatCount(resultCount)} sonuç · ${formatCount(catalog?.total ?? 0)} yapımlık AniList önbelleği`}
+              : `${formatCount(resultCount)} sonuç · ${formatCount(catalog?.total ?? 0)} yapımlık katalog önbelleği`}
           </p>
 
           <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -201,7 +201,7 @@ export default function Browse() {
             remote.isSearching ? (
               <div className="flex items-center justify-center gap-2 py-20 text-[13px] text-muted-foreground">
                 <Loader2 className="size-4 animate-spin" />
-                AniList kataloğunda aranıyor…
+                Katalogda aranıyor…
               </div>
             ) : (
               <EmptyCard
@@ -237,7 +237,7 @@ export default function Browse() {
                   ) : null}
                 </p>
                 <p className="hidden text-[11px] text-muted-foreground sm:block">
-                  Kaynak: AniList API
+                  Kaynak: canlı anime kataloğu
                 </p>
               </div>
 

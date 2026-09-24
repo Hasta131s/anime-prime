@@ -100,6 +100,77 @@ export const MAX_TAGLINE = 90;
 export const MAX_BIO = 500;
 export const MAX_HISTORY_ROWS = 240;
 
+// --- usernames -------------------------------------------------------------
+
+/** Every member owns one unique @username, chosen by themselves. */
+export const USERNAME_MIN = 3;
+export const USERNAME_MAX = 20;
+/** A member may rename themselves once every two weeks. */
+export const USERNAME_COOLDOWN_DAYS = 14;
+export const USERNAME_COOLDOWN_MS = USERNAME_COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
+
+export type UsernameStatus = "ok" | "current" | "invalid" | "taken" | "reserved";
+
+/** Names that would impersonate the site itself or mislead other members. */
+const RESERVED_USERNAMES = new Set([
+  "admin",
+  "yonetici",
+  "moderator",
+  "mod",
+  "destek",
+  "sistem",
+  "root",
+  "animeprime",
+  "official",
+  "staff",
+  "kurucu",
+  "owner",
+  "api",
+  "support",
+  "profil",
+  "ayarlar",
+  "giris",
+  "login",
+  "yardim",
+  "help",
+  "ben",
+  "me",
+]);
+
+/**
+ * Usernames are stored lowercase with any leading "@" stripped, so two members
+ * can never claim names that differ only in case or decoration.
+ */
+export function normalizeUsername(raw: string): string {
+  return raw.trim().replace(/^@+/, "").toLowerCase();
+}
+
+export function isReservedUsername(value: string) {
+  return RESERVED_USERNAMES.has(value);
+}
+
+/** Turkish validation message, or null when the name may be claimed. */
+export function usernameError(value: string): string | null {
+  if (value.length < USERNAME_MIN || value.length > USERNAME_MAX) {
+    return `Kullanıcı adı ${USERNAME_MIN}-${USERNAME_MAX} karakter olmalı.`;
+  }
+  if (!/^[a-z0-9_]+$/.test(value)) {
+    return "Yalnızca harf, rakam ve alt çizgi (_) kullanabilirsin.";
+  }
+  if (/^[0-9]+$/.test(value)) {
+    return "Kullanıcı adı en az bir harf içermeli.";
+  }
+  if (isReservedUsername(value)) {
+    return "Bu kullanıcı adı siteye ayrılmış.";
+  }
+  return null;
+}
+
+/** Whole days left before a member may rename themselves again. */
+export function usernameCooldownDaysLeft(nextChangeAt: number, now = Date.now()) {
+  return Math.max(0, Math.ceil((nextChangeAt - now) / (24 * 60 * 60 * 1000)));
+}
+
 export type ProfileStats = {
   titles: number;
   episodes: number;
@@ -110,6 +181,10 @@ export type ProfileStats = {
 export type ProfileView = {
   userId: Id<"users">;
   displayName: string;
+  /** The member's own unique @username, when they have claimed one. */
+  username?: string;
+  /** Earliest moment the username may change again. */
+  usernameChangeAt?: number;
   handle?: string;
   image?: string;
   /** Profile photo the member uploaded from their gallery. */

@@ -122,7 +122,7 @@ function SiteSidebar() {
           </Link>
         )}
         <p className="mt-2.5 px-0.5 text-[10px] leading-relaxed text-muted-foreground">
-          Veriler AniList API üzerinden sağlanır.
+          Veriler canlı anime kataloğu üzerinden sağlanır.
         </p>
       </div>
     </aside>
@@ -237,14 +237,12 @@ function SiteFooter() {
             >
               En yüksek puanlılar
             </Link>
-            <a
-              href="https://anilist.co"
-              target="_blank"
-              rel="noreferrer noopener"
+            <Link
+              to="/takvim"
               className="text-muted-foreground transition-colors hover:text-primary"
             >
-              AniList API
-            </a>
+              Yayın takvimi
+            </Link>
           </nav>
           <p className="text-[12px] text-muted-foreground">
             © {new Date().getFullYear()} Anime Prime
@@ -252,8 +250,8 @@ function SiteFooter() {
         </div>
 
         <p className="border-t border-border pt-4 text-[11px] leading-relaxed text-muted-foreground">
-          Tüm başlık, puan, kadro ve görsel verileri AniList API&apos;sinden canlı
-          olarak sağlanır. Anime Prime video barındırmaz ve hiçbir siteden akış
+          Tüm başlık, puan, kadro ve görsel verileri canlı anime kataloğundan
+          sağlanır. Anime Prime video barındırmaz ve hiçbir siteden akış
           çekmez; &quot;Nerede izlenir&quot; bağlantıları lisanslı platformlara
           yönlendirir.
         </p>

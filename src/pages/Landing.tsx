@@ -182,7 +182,7 @@ export default function Landing() {
       <Container className="space-y-9 py-8">
         <AnimeSection
           title="Şu an trend"
-          blurb="AniList trend sıralaması, 6 saatte bir yenilenir."
+          blurb="Katalogun trend sıralaması, 6 saatte bir yenilenir."
           items={trending.items}
           status={trending.status}
           message={trending.message}
@@ -212,7 +212,7 @@ export default function Landing() {
 
         <AnimeSection
           title="En yüksek puanlılar"
-          blurb="AniList ortalamasına göre zirve."
+          blurb="İzleyici ortalamasına göre zirve."
           items={top.items}
           status={top.status}
           message={top.message}
@@ -243,7 +243,7 @@ export default function Landing() {
             <p className="mt-3 flex items-center gap-2 border-t border-border pt-3 text-[11px] text-muted-foreground">
               <Database className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
               {stats.titles > 0
-                ? `${formatCount(stats.titles)} yapım · ${stats.genres} tür · ${stats.studios} stüdyo, doğrudan AniList kataloğundan sayılır.`
+                ? `${formatCount(stats.titles)} yapım · ${stats.genres} tür · ${stats.studios} stüdyo, doğrudan katalogdan sayılır.`
                 : "Katalog güncelleniyor…"}
             </p>
           </Panel>
@@ -254,7 +254,7 @@ export default function Landing() {
             {[
               {
                 label: "Gerçek veri",
-                body: "Başlık, puan, tür, stüdyo, kadro ve bölüm bilgileri AniList API'sinden canlı çekilir. Afiş yoksa yapımın adı gösterilir; uydurma görsel kullanılmaz.",
+                body: "Başlık, puan, tür, stüdyo, kadro ve bölüm bilgileri canlı anime kataloğundan çekilir. Afiş yoksa yapımın adı gösterilir; uydurma görsel kullanılmaz.",
               },
               {
                 label: "Nerede izlenir",

@@ -50,7 +50,7 @@ export function TrailerButton({
         <DialogHeader className="sr-only">
           <DialogTitle>{title} fragmanı</DialogTitle>
           <DialogDescription>
-            AniList üzerinden sağlanan resmî YouTube fragmanı.
+            Yapımın resmî YouTube fragmanı.
           </DialogDescription>
         </DialogHeader>
         <div className="aspect-video w-full overflow-hidden rounded-[3px] bg-black">

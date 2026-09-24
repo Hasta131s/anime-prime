@@ -28,13 +28,19 @@ import {
   MAX_DISPLAY_NAME,
   MAX_FAVORITES,
   MAX_TAGLINE,
+  USERNAME_COOLDOWN_MS,
   handleFromEmail,
+  isReservedUsername,
+  normalizeUsername,
   resolveDisplayName,
+  usernameCooldownDaysLeft,
+  usernameError,
   type CharacterPick,
   type CommentView,
   type MemberCardView,
   type ProfileResult,
   type ProfileView,
+  type UsernameStatus,
   type WatchEntryView,
 } from "./communityView";
 import { decorateComments } from "./comments";
@@ -135,8 +141,19 @@ async function buildProfileView(
     view.characterMediaAnilistId = profile.characterMediaAnilistId;
   }
 
-  const handle = handleFromEmail(user.email);
-  if (handle) view.handle = handle;
+  // The member's own @username wins over the name derived from their e-mail,
+  // and it is the single handle the whole site shows.
+  if (profile?.username) {
+    view.username = profile.username;
+    view.handle = profile.username;
+  } else {
+    const fallback = handleFromEmail(user.email);
+    if (fallback) view.handle = fallback;
+  }
+  if (profile?.usernameChangedAt) {
+    view.usernameChangeAt = profile.usernameChangedAt + USERNAME_COOLDOWN_MS;
+  }
+
   if (user.image) view.image = user.image;
   if (user.role) view.role = user.role;
   if (user.banReason) view.banReason = user.banReason;
@@ -268,7 +285,7 @@ export async function memberCardsFor(
         favorites: profile?.favoriteAnimeIds.length ?? 0,
         joinedAt: user._creationTime,
       };
-      const handle = handleFromEmail(user.email);
+      const handle = profile?.username ?? handleFromEmail(user.email);
       if (handle) card.handle = handle;
 
       // An uploaded photo beats both the account avatar and the character
@@ -459,6 +476,79 @@ export const setBanner = mutation({
       bannerAnilistId: args.anilistId,
       updatedAt: Date.now(),
     });
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Username
+// ---------------------------------------------------------------------------
+
+/**
+ * Claims or renames the member's own @username.
+ *
+ * Availability is checked against the `by_username` index inside this mutation,
+ * so two members can never end up sharing a handle. The first claim is
+ * immediate; every rename after that is locked for two weeks.
+ */
+export const setUsername = mutation({
+  args: { username: v.string() },
+  handler: async (ctx, args): Promise<string> => {
+    const user = await requireMember(ctx);
+    const profile = await ensureProfile(ctx, user._id);
+
+    const value = normalizeUsername(args.username);
+    if (profile.username === value) return value;
+
+    // Renaming is rate-limited; the very first claim is not.
+    if (profile.username && profile.usernameChangedAt) {
+      const daysLeft = usernameCooldownDaysLeft(
+        profile.usernameChangedAt + USERNAME_COOLDOWN_MS,
+      );
+      if (daysLeft > 0) {
+        throw new Error(
+          `Kullanıcı adını 2 haftada bir değiştirebilirsin. ${daysLeft} gün sonra tekrar dene.`,
+        );
+      }
+    }
+
+    const invalid = usernameError(value);
+    if (invalid) throw new Error(invalid);
+
+    const taken = await ctx.db
+      .query("profiles")
+      .withIndex("by_username", (q) => q.eq("username", value))
+      .first();
+    if (taken && taken._id !== profile._id) {
+      throw new Error("Bu kullanıcı adı başka bir üye tarafından kullanılıyor.");
+    }
+
+    await ctx.db.patch(profile._id, {
+      username: value,
+      usernameChangedAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    return value;
+  },
+});
+
+/** Live availability check so the editor can warn before the member saves. */
+export const usernameAvailable = query({
+  args: { username: v.string() },
+  handler: async (ctx, args): Promise<UsernameStatus> => {
+    const value = normalizeUsername(args.username);
+
+    const invalid = usernameError(value);
+    if (invalid) return isReservedUsername(value) ? "reserved" : "invalid";
+
+    const taken = await ctx.db
+      .query("profiles")
+      .withIndex("by_username", (q) => q.eq("username", value))
+      .first();
+    if (!taken) return "ok";
+
+    const viewer = await currentUser(ctx);
+    return viewer && taken.userId === viewer._id ? "current" : "taken";
   },
 });
 

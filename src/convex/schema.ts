@@ -235,6 +235,13 @@ const schema = defineSchema(
      */
     profiles: defineTable({
       userId: v.id("users"),
+      /**
+       * The member's own @username. Lowercased, unique across the site and
+       * changeable at most once every two weeks (see `usernameChangedAt`).
+       */
+      username: v.optional(v.string()),
+      /** Timestamp of the last username claim; drives the rename cooldown. */
+      usernameChangedAt: v.optional(v.number()),
       displayName: v.optional(v.string()),
       tagline: v.optional(v.string()),
       bio: v.optional(v.string()),
@@ -276,7 +283,10 @@ const schema = defineSchema(
       updatedAt: v.number(),
     })
       .index("by_userId", ["userId"])
-      .index("by_updatedAt", ["updatedAt"]),
+      .index("by_updatedAt", ["updatedAt"])
+      // Uniqueness is enforced in `setUsername`, which checks this index inside
+      // the same transaction before writing.
+      .index("by_username", ["username"]),
 
     /** "En son izlenenler" — one row per episode a signed-in user watched. */
     watchHistory: defineTable({
