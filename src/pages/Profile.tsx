@@ -266,7 +266,7 @@ function ProfileHeader({
 
   return (
     <section className="border-b border-border">
-      <div className="relative h-[190px] w-full overflow-hidden sm:h-[250px] lg:h-[290px]">
+      <div className="relative h-[140px] w-full overflow-hidden sm:h-[180px] lg:h-[200px]">
         {hero ? (
           <img
             src={hero}
@@ -281,7 +281,7 @@ function ProfileHeader({
       </div>
 
       <Container>
-        <div className="-mt-[84px] flex flex-col gap-4 pb-5 sm:-mt-[112px] sm:flex-row sm:items-end sm:gap-6">
+        <div className="-mt-[96px] flex flex-col gap-4 pb-5 sm:-mt-[132px] sm:flex-row sm:items-end sm:gap-6">
           <ProfilePortrait profile={profile} />
 
           <div className="min-w-0 flex-1 sm:pb-1">
@@ -333,7 +333,7 @@ function ProfileHeader({
 function ProfilePortrait({ profile }: { profile: ProfileView }) {
   const portrait = profile.characterImage ?? profile.image;
   const frame =
-    "w-[112px] shrink-0 overflow-hidden rounded-[3px] border-2 border-background sm:w-[140px]";
+    "w-[128px] shrink-0 overflow-hidden rounded-[3px] border-2 border-background shadow-xl shadow-black/40 sm:w-[164px]";
 
   if (portrait) {
     return (
@@ -350,7 +350,7 @@ function ProfilePortrait({ profile }: { profile: ProfileView }) {
       aria-hidden="true"
       className={cn(
         frame,
-        "flex aspect-[3/4] items-center justify-center bg-secondary text-[30px] font-bold text-muted-foreground sm:text-[36px]",
+        "flex aspect-[3/4] items-center justify-center bg-secondary text-[34px] font-bold text-muted-foreground sm:text-[44px]",
       )}
     >
       {initialsFor(profile.displayName)}

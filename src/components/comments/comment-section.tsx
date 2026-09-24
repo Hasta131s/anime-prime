@@ -588,10 +588,9 @@ function AuthorAvatar({
     <span
       aria-hidden="true"
       className={cn(
-        "flex shrink-0 items-center justify-center rounded-[2px] font-semibold text-white",
+        "flex shrink-0 items-center justify-center rounded-[2px] border border-border bg-secondary font-semibold text-muted-foreground",
         size,
       )}
-      style={{ backgroundColor: author.accent ?? "#3db4f2" }}
     >
       {initialsFor(author.name)}
     </span>
